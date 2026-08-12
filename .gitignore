@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node / React
+node_modules/
+reclamations-front/node_modules/
+reclamations-front/dist/
+
+# Divers
+.DS_Store

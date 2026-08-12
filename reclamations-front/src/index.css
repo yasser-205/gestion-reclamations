@@ -1,0 +1,220 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --bg-soft: #f7f6f9;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --danger: #d1293d;
+  --danger-bg: rgba(209, 41, 61, 0.1);
+  --succes: #1a7f37;
+  --succes-bg: rgba(26, 127, 55, 0.1);
+  --avertissement: #a86a00;
+  --avertissement-bg: rgba(250, 178, 25, 0.18);
+  --ombre: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 16px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #16171d;
+  --bg-soft: #1c1d24;
+  --border: #2e303a;
+  --code-bg: #1f2028;
+  --accent: #c084fc;
+  --accent-bg: rgba(192, 132, 252, 0.15);
+  --accent-border: rgba(192, 132, 252, 0.5);
+  --danger: #f28b93;
+  --danger-bg: rgba(242, 139, 147, 0.12);
+  --succes: #7ee2a8;
+  --succes-bg: rgba(126, 226, 168, 0.12);
+  --avertissement: #fab219;
+  --avertissement-bg: rgba(250, 178, 25, 0.18);
+  --ombre: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 32px;
+  letter-spacing: -0.6px;
+  margin: 0 0 20px;
+}
+h2 {
+  font-size: 20px;
+  letter-spacing: -0.2px;
+  margin: 24px 0 8px;
+}
+h3 {
+  font-size: 16px;
+  margin: 20px 0 8px;
+}
+p {
+  margin: 0 0 8px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-h);
+  border-radius: 6px;
+  padding: 8px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.actif {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+button.btn-secondaire {
+  background: transparent;
+}
+button.btn-primaire {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  padding: 10px 24px;
+}
+button.btn-primaire:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: var(--accent);
+}
+
+input, select, textarea {
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--accent-border);
+  outline-offset: -1px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+.erreur {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.succes {
+  color: var(--succes);
+  background: var(--succes-bg);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.info {
+  color: var(--text);
+  background: var(--bg-soft);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.legende {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid rgba(128, 128, 128, 0.3);
+  border-top-color: var(--accent);
+  animation: tourner 0.7s linear infinite;
+  vertical-align: middle;
+}
+button .spinner {
+  margin-right: 8px;
+}
+@keyframes tourner {
+  to { transform: rotate(360deg); }
+}
+
+.chargement-page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  padding: 24px 0;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  background: var(--bg-soft);
+}

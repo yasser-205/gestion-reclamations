@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command winget -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
+      "PowerShell(winget list --id MongoDB.Server 2>$null)",
+      "PowerShell(docker --version)",
+      "PowerShell(winget search MongoDB)",
+      "PowerShell(winget install --id MongoDB.Server --accept-package-agreements --accept-source-agreements)",
+      "PowerShell(winget install --id MongoDB.Server --source winget --accept-package-agreements --accept-source-agreements)",
+      "PowerShell(Get-Command mongod -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 27017 -WarningAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 27017 -InformationLevel Quiet)",
+      "PowerShell(& \".\\\\venv\\\\Scripts\\\\python.exe\" -c \"from pymongo import MongoClient; c = MongoClient\\('mongodb://localhost:27017', serverSelectionTimeoutMS=3000\\); print\\(c.admin.command\\('ping'\\)\\)\")",
+      "PowerShell(& \".\\\\venv\\\\Scripts\\\\uvicorn.exe\" app.main:app --host 127.0.0.1 --port 8000)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://127.0.0.1:8000/health\")",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId = 4920\")",
+      "PowerShell(Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq 5173 -or $_.LocalPort -eq 8000 } | Select-Object LocalPort, State, OwningProcess)"
+    ]
+  }
+}
