@@ -25,7 +25,6 @@ mon_projet/
 │       └── api.js               Client HTTP vers le backend
 ├── frontend/                Ancien prototype Streamlit (conservé, non maintenu)
 ├── creer_admin.py           Script : crée un compte admin de démarrage
-├── creer_gestionnaire.py    Script : crée un compte gestionnaire de démarrage
 └── venv/                    Environnement virtuel Python
 ```
 
