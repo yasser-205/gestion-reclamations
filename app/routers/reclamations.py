@@ -1,16 +1,25 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from app.models.reclamation import ReclamationCreation, ReclamationPublic, Canal, Motif, Priorite
+from app.models.reclamation import (
+    ReclamationCreation,
+    ReclamationPublic,
+    Canal,
+    Motif,
+    Priorite,
+    REGEX_NUMERO_SINISTRE,
+    REGEX_ATTESTATION,
+    REGEX_MATRICULATION,
+)
 from app.repositories import reclamation_repo, utilisateur_repo
 from app.core.dependances import get_utilisateur_courant, exiger_role
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 router = APIRouter(prefix="/reclamation", tags=["reclamations"])
 
 @router.post("",response_model=ReclamationPublic, status_code=201)
 def creer(
     donnees : ReclamationCreation,
-    utilisateur : dict = Depends(get_utilisateur_courant),
+    utilisateur : dict = Depends(exiger_role("client", "admin")),
 ):
     auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
     return reclamation_repo.creer_reclamation(donnees.model_dump(), auteur)
@@ -42,6 +51,34 @@ class ModificationReclamation(BaseModel):
     description: Optional[str] = None
     attestation: Optional[str] = None
     matriculation: Optional[str] = None
+    numero_sinistre: Optional[str] = None
+
+    @field_validator("numero_sinistre")
+    @classmethod
+    def verifier_format_numero_sinistre(cls, valeur):
+        if valeur is not None and not REGEX_NUMERO_SINISTRE.match(valeur):
+            raise ValueError(
+                "Le numéro de sinistre doit respecter le format SIN-AAAA-000000 (ex: SIN-2026-000123)."
+            )
+        return valeur
+
+    @field_validator("attestation")
+    @classmethod
+    def verifier_format_attestation(cls, valeur):
+        if valeur is not None and not REGEX_ATTESTATION.match(valeur):
+            raise ValueError(
+                "L'attestation doit respecter le format CF 1234 / 123456 ou C 1234 / 123456."
+            )
+        return valeur
+
+    @field_validator("matriculation")
+    @classmethod
+    def verifier_format_matriculation(cls, valeur):
+        if valeur is not None and not REGEX_MATRICULATION.match(valeur):
+            raise ValueError(
+                "La matriculation doit respecter le format 12345-A-6, 12345-WW-1 ou 12345-RT-1."
+            )
+        return valeur
 
 @router.patch("/{id}", response_model=ReclamationPublic)
 def modifier(

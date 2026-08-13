@@ -2,6 +2,9 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { apiRequest, messageErreur } from "../api";
 
+const REGEX_TELEPHONE = /^0[5-7]\d{8}$/;
+const REGEX_MOT_DE_PASSE = /^(?=.*[A-Z]).{8,}$/;
+
 function Login({ onConnecte }) {
   const [mode, setMode] = useState("connexion");
   const [erreur, setErreur] = useState("");
@@ -42,6 +45,14 @@ function Login({ onConnecte }) {
     setErreur("");
     if (!login || !motDePasse || !nom || !prenom || !email) {
       setErreur("Tous les champs sauf téléphone sont obligatoires.");
+      return;
+    }
+    if (!REGEX_MOT_DE_PASSE.test(motDePasse)) {
+      setErreur("Le mot de passe doit contenir au moins 8 caractères dont une majuscule.");
+      return;
+    }
+    if (telephone && !REGEX_TELEPHONE.test(telephone)) {
+      setErreur("Le téléphone doit contenir 10 chiffres et commencer par 05, 06 ou 07.");
       return;
     }
     setChargement(true);
@@ -111,6 +122,8 @@ function Login({ onConnecte }) {
               type="password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
+              pattern={REGEX_MOT_DE_PASSE.source}
+              title="Au moins 8 caractères dont une majuscule"
             />
           </label>
           <label>
@@ -127,7 +140,13 @@ function Login({ onConnecte }) {
           </label>
           <label>
             Téléphone
-            <input value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+            <input
+              placeholder="0612345678"
+              value={telephone}
+              onChange={(e) => setTelephone(e.target.value)}
+              pattern={REGEX_TELEPHONE.source}
+              title="10 chiffres, commence par 05, 06 ou 07"
+            />
           </label>
           <button type="submit" disabled={chargement}>S'inscrire</button>
         </form>

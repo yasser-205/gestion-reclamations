@@ -32,3 +32,14 @@ def modifier_utilisateur(id: str, maj: dict) -> dict | None:
         collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
     doc = collection.find_one({"_id": ObjectId(id)})
     return serialiser(doc) if doc else None
+
+def get_par_client_id(client_id: str) -> dict |None:
+    doc = collection.find_one({"client_id" : client_id})
+    return serialiser(doc) if doc else None
+
+def changer_mot_de_passe(id:str, nouveau_hache: str) -> bool:
+    resultat = collection.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"mot_de_passe": nouveau_hache}},
+    )
+    return resultat.modified_count > 0

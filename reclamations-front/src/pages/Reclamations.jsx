@@ -16,6 +16,12 @@ const STATUTS = [
 const STATUTS_CLOTURES = ["resolue", "cloturee", "rejetee"];
 const MOTIFS = ["remboursement", "delai", "prime", "contrat", "service", "autre"];
 const TAILLE_PAGE = 10;
+const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
+const EXEMPLE_NUMERO_SINISTRE = "SIN-2026-000123";
+const REGEX_ATTESTATION = /^(CF|C) \d{4} \/ \d{6}$/;
+const EXEMPLE_ATTESTATION = "CF 1234 / 123456 ou C 1234 / 123456";
+const REGEX_MATRICULATION = /^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$/;
+const EXEMPLE_MATRICULATION = "12345-A-6, 12345-WW-1 ou 12345-RT-1";
 
 function etatEcheance(r) {
   if (!r.date_echeance || STATUTS_CLOTURES.includes(r.statut)) return null;
@@ -291,6 +297,9 @@ function Reclamations({ token, moi, cibleReclamation }) {
                     <p><strong>Matriculation :</strong> {rec.matriculation || "—"}</p>
                   </>
                 )}
+                {rec.type_reclamation === "sinistre" && (
+                  <p><strong>Numéro de sinistre :</strong> {rec.numero_sinistre || "—"}</p>
+                )}
               </div>
               <div>
                 <p><strong>Canal :</strong> {rec.canal}</p>
@@ -517,12 +526,33 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
   const [description, setDescription] = useState(rec.description);
   const [attestation, setAttestation] = useState(rec.attestation || "");
   const [matriculation, setMatriculation] = useState(rec.matriculation || "");
+  const [numeroSinistre, setNumeroSinistre] = useState(rec.numero_sinistre || "");
   const [enCours, setEnCours] = useState(false);
 
   async function enregistrer() {
     if (!description.trim()) {
       toast.error("La description est obligatoire.");
       return;
+    }
+    if (rec.type_reclamation === "sinistre") {
+      if (!numeroSinistre) {
+        toast.error("Le numéro de sinistre est obligatoire.");
+        return;
+      }
+      if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
+        toast.error(`Le numéro de sinistre doit respecter le format ${EXEMPLE_NUMERO_SINISTRE}.`);
+        return;
+      }
+    }
+    if (rec.type_reclamation === "production") {
+      if (attestation && !REGEX_ATTESTATION.test(attestation)) {
+        toast.error(`L'attestation doit respecter le format ${EXEMPLE_ATTESTATION}.`);
+        return;
+      }
+      if (matriculation && !REGEX_MATRICULATION.test(matriculation)) {
+        toast.error(`La matriculation doit respecter le format ${EXEMPLE_MATRICULATION}.`);
+        return;
+      }
     }
     setEnCours(true);
     const rep = await apiRequest(`/reclamation/${rec.id}`, {
@@ -536,6 +566,7 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
         description,
         attestation: attestation || null,
         matriculation: matriculation || null,
+        numero_sinistre: rec.type_reclamation === "sinistre" ? numeroSinistre : null,
       },
     });
     setEnCours(false);
@@ -585,13 +616,35 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
             <>
               <label>
                 Attestation
-                <input value={attestation} onChange={(e) => setAttestation(e.target.value)} />
+                <input
+                  placeholder={EXEMPLE_ATTESTATION}
+                  value={attestation}
+                  onChange={(e) => setAttestation(e.target.value)}
+                  pattern={REGEX_ATTESTATION.source}
+                />
               </label>
               <label>
                 Matriculation
-                <input value={matriculation} onChange={(e) => setMatriculation(e.target.value)} />
+                <input
+                  placeholder={EXEMPLE_MATRICULATION}
+                  value={matriculation}
+                  onChange={(e) => setMatriculation(e.target.value)}
+                  pattern={REGEX_MATRICULATION.source}
+                />
               </label>
             </>
+          )}
+          {rec.type_reclamation === "sinistre" && (
+            <label>
+              Numéro de sinistre
+              <input
+                placeholder={EXEMPLE_NUMERO_SINISTRE}
+                value={numeroSinistre}
+                onChange={(e) => setNumeroSinistre(e.target.value)}
+                pattern="^SIN-\d{4}-\d{6}$"
+                required
+              />
+            </label>
           )}
         </div>
       </div>

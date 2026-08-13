@@ -32,6 +32,13 @@
   top: 16px;
   right: 16px;
 }
+
+.bouton-profil-flottant {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}
 .sidebar .nav {
   display: flex;
   flex-direction: column;
@@ -105,6 +112,10 @@
 .entete-page .sous-titre {
   margin: 0;
   color: var(--text);
+}
+
+.carte + .carte {
+  margin-top: 24px;
 }
 
 .carte {

@@ -3,6 +3,9 @@ import toast from "react-hot-toast";
 import { apiRequest, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
+const REGEX_MOT_DE_PASSE = /^(?=.*[A-Z]).{8,}$/;
+const MESSAGE_MOT_DE_PASSE = "Le mot de passe doit contenir au moins 8 caractères dont une majuscule.";
+
 const ROLES = [
   { valeur: "agent", label: "Agent" },
   { valeur: "gestionnaire", label: "Gestionnaire" },
@@ -56,8 +59,8 @@ function Employes({ token }) {
       setErreurForm("Tous les champs sont obligatoires.");
       return;
     }
-    if (motDePasse.length < 6) {
-      setErreurForm("Le mot de passe doit contenir au moins 6 caractères.");
+    if (!REGEX_MOT_DE_PASSE.test(motDePasse)) {
+      setErreurForm(MESSAGE_MOT_DE_PASSE);
       return;
     }
 
@@ -105,7 +108,13 @@ function Employes({ token }) {
             </label>
             <label>
               Mot de passe
-              <input type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
+              <input
+                type="password"
+                value={motDePasse}
+                onChange={(e) => setMotDePasse(e.target.value)}
+                pattern={REGEX_MOT_DE_PASSE.source}
+                title={MESSAGE_MOT_DE_PASSE}
+              />
             </label>
             <label>
               Nom
@@ -174,21 +183,21 @@ function DetailEmploye({ token, employe, onRetour, onModifie }) {
   const [nom, setNom] = useState(employe.nom);
   const [prenom, setPrenom] = useState(employe.prenom);
   const [role, setRole] = useState(employe.role);
-  const [actif, setActif] = useState(employe.actif);
   const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
   const [erreur, setErreur] = useState("");
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [enCoursActivation, setEnCoursActivation] = useState(false);
 
   async function enregistrer(e) {
     e.preventDefault();
     setErreur("");
 
-    if (nouveauMotDePasse && nouveauMotDePasse.length < 6) {
-      setErreur("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+    if (nouveauMotDePasse && !REGEX_MOT_DE_PASSE.test(nouveauMotDePasse)) {
+      setErreur(MESSAGE_MOT_DE_PASSE);
       return;
     }
 
-    const corps = { nom, prenom, role, actif };
+    const corps = { nom, prenom, role };
     if (nouveauMotDePasse) corps.mot_de_passe = nouveauMotDePasse;
 
     setEnvoiEnCours(true);
@@ -206,10 +215,39 @@ function DetailEmploye({ token, employe, onRetour, onModifie }) {
     }
   }
 
+  async function basculerActif() {
+    const action = employe.actif ? "désactiver" : "réactiver";
+    if (!window.confirm(`Voulez-vous ${action} le compte de ${employe.prenom} ${employe.nom} ?`)) {
+      return;
+    }
+    setEnCoursActivation(true);
+    const rep = await apiRequest(`/utilisateurs/${employe.id}`, {
+      method: "PATCH",
+      token,
+      body: { actif: !employe.actif },
+    });
+    setEnCoursActivation(false);
+    if (rep.ok) {
+      toast.success(employe.actif ? "Compte désactivé." : "Compte réactivé.");
+      onModifie();
+    } else {
+      toast.error(messageErreur(rep.status));
+    }
+  }
+
   return (
     <div className="page page-formulaire">
       <div className="entete-page">
         <button type="button" className="btn-secondaire" onClick={onRetour}>← Retour à la liste</button>
+        <button
+          type="button"
+          className={employe.actif ? "btn-danger" : "btn-primaire"}
+          onClick={basculerActif}
+          disabled={enCoursActivation}
+        >
+          {enCoursActivation && <Spinner taille={14} />}
+          {employe.actif ? "Désactiver le compte" : "Réactiver le compte"}
+        </button>
       </div>
 
       <form className="carte formulaire-pro" onSubmit={enregistrer}>
@@ -233,11 +271,8 @@ function DetailEmploye({ token, employe, onRetour, onModifie }) {
               </select>
             </label>
             <label>
-              Statut
-              <select value={actif ? "actif" : "inactif"} onChange={(e) => setActif(e.target.value === "actif")}>
-                <option value="actif">Actif</option>
-                <option value="inactif">Désactivé</option>
-              </select>
+              Statut actuel
+              <input value={employe.actif ? "Actif" : "Désactivé"} disabled />
             </label>
             <label className="champ-pleine-largeur">
               Nouveau mot de passe (optionnel)
@@ -246,6 +281,8 @@ function DetailEmploye({ token, employe, onRetour, onModifie }) {
                 placeholder="Laisser vide pour ne pas changer"
                 value={nouveauMotDePasse}
                 onChange={(e) => setNouveauMotDePasse(e.target.value)}
+                pattern={REGEX_MOT_DE_PASSE.source}
+                title={MESSAGE_MOT_DE_PASSE}
               />
             </label>
           </div>

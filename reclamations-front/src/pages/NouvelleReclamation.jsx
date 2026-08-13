@@ -4,15 +4,18 @@ import { apiRequest, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
 const TYPES_MATRICULATION = [
-  { valeur: "normale", label: "Normale (marocaine)", exemple: "12345-A-6" },
-  { valeur: "ww", label: "WW (véhicule neuf)", exemple: "12345-WW-1" },
-  { valeur: "frontiere", label: "Frontière / touriste (RT)", exemple: "12345-RT-1" },
+  { valeur: "normale", label: "Normale (marocaine)", exemple: "12345-A-6", regex: /^\d{1,5}-[A-Z]-\d{1,2}$/ },
+  { valeur: "ww", label: "WW (véhicule neuf)", exemple: "12345-WW-1", regex: /^\d{1,6}-WW-\d{1,2}$/ },
+  { valeur: "frontiere", label: "Frontière / touriste (RT)", exemple: "12345-RT-1", regex: /^\d{1,6}-RT-\d{1,2}$/ },
 ];
 
 const TYPES_ATTESTATION = [
-  { valeur: "frontiere", label: "Frontière (CF)", exemple: "CF 1234 / 123456" },
-  { valeur: "tpv", label: "TPV (C)", exemple: "C 1234 / 123456" },
+  { valeur: "frontiere", label: "Frontière (CF)", exemple: "CF 1234 / 123456", regex: /^CF \d{4} \/ \d{6}$/ },
+  { valeur: "tpv", label: "TPV (C)", exemple: "C 1234 / 123456", regex: /^C \d{4} \/ \d{6}$/ },
 ];
+
+const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
+const EXEMPLE_NUMERO_SINISTRE = "SIN-2026-000123";
 
 function NouvelleReclamation({ token, moi }) {
   const role = moi?.role;
@@ -23,9 +26,12 @@ function NouvelleReclamation({ token, moi }) {
   const [attestation, setAttestation] = useState("");
   const [typeMatriculation, setTypeMatriculation] = useState(TYPES_MATRICULATION[0].valeur);
   const [matriculation, setMatriculation] = useState("");
+  const [numeroSinistre, setNumeroSinistre] = useState("");
 
-  const formatAttestation = TYPES_ATTESTATION.find((t) => t.valeur === typeAttestation)?.exemple || "";
-  const formatMatriculation = TYPES_MATRICULATION.find((t) => t.valeur === typeMatriculation)?.exemple || "";
+  const infoAttestation = TYPES_ATTESTATION.find((t) => t.valeur === typeAttestation);
+  const infoMatriculation = TYPES_MATRICULATION.find((t) => t.valeur === typeMatriculation);
+  const formatAttestation = infoAttestation?.exemple || "";
+  const formatMatriculation = infoMatriculation?.exemple || "";
 
   const [clients, setClients] = useState([]);
   const [clientId, setClientId] = useState("");
@@ -60,9 +66,29 @@ function NouvelleReclamation({ token, moi }) {
       setErreur("La description est obligatoire.");
       return;
     }
-    if (typeReclamation === "production" && !attestation && !matriculation) {
-      setErreur("Pour une production, renseignez attestation ou matriculation.");
-      return;
+    if (typeReclamation === "production") {
+      if (!attestation && !matriculation) {
+        setErreur("Pour une production, renseignez attestation ou matriculation.");
+        return;
+      }
+      if (attestation && !infoAttestation.regex.test(attestation)) {
+        setErreur(`L'attestation doit respecter le format ${formatAttestation}.`);
+        return;
+      }
+      if (matriculation && !infoMatriculation.regex.test(matriculation)) {
+        setErreur(`La matriculation doit respecter le format ${formatMatriculation}.`);
+        return;
+      }
+    }
+    if (typeReclamation === "sinistre") {
+      if (!numeroSinistre) {
+        setErreur("Le numéro de sinistre est obligatoire.");
+        return;
+      }
+      if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
+        setErreur(`Le numéro de sinistre doit respecter le format ${EXEMPLE_NUMERO_SINISTRE}.`);
+        return;
+      }
     }
 
     const idClient = role === "client" ? monClientId : clientId;
@@ -77,6 +103,7 @@ function NouvelleReclamation({ token, moi }) {
       contrat: contrat || null,
       attestation: attestation || null,
       matriculation: matriculation || null,
+      numero_sinistre: typeReclamation === "sinistre" ? numeroSinistre : null,
       canal,
       motif,
       description,
@@ -93,6 +120,7 @@ function NouvelleReclamation({ token, moi }) {
       setContrat("");
       setAttestation("");
       setMatriculation("");
+      setNumeroSinistre("");
     } else {
       setErreur(messageErreur(rep.status));
     }
@@ -138,6 +166,24 @@ function NouvelleReclamation({ token, moi }) {
             </button>
           </div>
 
+          {typeReclamation === "sinistre" && (
+            <div className="champs-grille champs-grille-suite">
+              <label>
+                Numéro de sinistre <span className="requis">*</span>
+                <input
+                  placeholder={EXEMPLE_NUMERO_SINISTRE}
+                  value={numeroSinistre}
+                  onChange={(e) => setNumeroSinistre(e.target.value)}
+                  pattern="^SIN-\d{4}-\d{6}$"
+                  required
+                />
+              </label>
+              <p className="legende champ-pleine-largeur">
+                Format : {EXEMPLE_NUMERO_SINISTRE}
+              </p>
+            </div>
+          )}
+
           {typeReclamation === "production" && (
             <div className="champs-grille champs-grille-suite">
               <label>
@@ -154,6 +200,7 @@ function NouvelleReclamation({ token, moi }) {
                   placeholder={formatAttestation}
                   value={attestation}
                   onChange={(e) => setAttestation(e.target.value)}
+                  pattern={infoAttestation.regex.source}
                 />
               </label>
               <p className="legende champ-pleine-largeur">
@@ -173,6 +220,7 @@ function NouvelleReclamation({ token, moi }) {
                   placeholder={formatMatriculation}
                   value={matriculation}
                   onChange={(e) => setMatriculation(e.target.value)}
+                  pattern={infoMatriculation.regex.source}
                 />
               </label>
               <p className="legende champ-pleine-largeur">

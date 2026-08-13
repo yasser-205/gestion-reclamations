@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 from typing import Optional
+from app.core.validation import valider_format_mot_de_passe
 
 class Role (str,Enum):
     agent = "agent"
@@ -19,7 +20,12 @@ class UtilisateurBase(BaseModel):
 
 
 class UtilisateurCreation(UtilisateurBase):
-    mot_de_passe: str = Field(min_length=6)
+    mot_de_passe: str = Field(min_length=8)
+
+    @field_validator("mot_de_passe")
+    @classmethod
+    def verifier_mot_de_passe(cls, valeur):
+        return valider_format_mot_de_passe(valeur)
 
 class UtilisateurPublic(UtilisateurBase):
     id:str

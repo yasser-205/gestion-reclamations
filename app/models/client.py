@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, date
 from typing import Optional
+from app.core.validation import valider_format_telephone
 
 class Adresse(BaseModel):
     rue: str
@@ -20,6 +21,11 @@ class ClientBase(BaseModel):
     date_naissance: Optional[date] = None
     adresse: Optional[Adresse] = None
     contrat: list[Contrat] = []
+
+    @field_validator("telephone")
+    @classmethod
+    def verifier_telephone(cls, valeur):
+        return valider_format_telephone(valeur)
 
 class ClientCreation(ClientBase):
     pass

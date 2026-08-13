@@ -3,7 +3,13 @@ import toast from "react-hot-toast";
 import { apiRequest, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
-function Clients({ token, onVoirReclamation }) {
+const REGEX_TELEPHONE = /^0[5-7]\d{8}$/;
+const MESSAGE_TELEPHONE = "Le téléphone doit contenir 10 chiffres et commencer par 05, 06 ou 07.";
+const REGEX_MOT_DE_PASSE = /^(?=.*[A-Z]).{8,}$/;
+const MESSAGE_MOT_DE_PASSE = "Le mot de passe doit contenir au moins 8 caractères dont une majuscule.";
+const ROLES_RESET_MDP = ["agent", "responsable", "admin"];
+
+function Clients({ token, moi, onVoirReclamation }) {
   const [clients, setClients] = useState(null);
   const [erreur, setErreur] = useState("");
   const [recharge, setRecharge] = useState(0);
@@ -30,6 +36,7 @@ function Clients({ token, onVoirReclamation }) {
       <DetailClient
         client={client}
         token={token}
+        moi={moi}
         onRetour={() => setSelectionId("")}
         onModifie={() => setRecharge((n) => n + 1)}
         onVoirReclamation={onVoirReclamation}
@@ -75,7 +82,7 @@ function Clients({ token, onVoirReclamation }) {
   );
 }
 
-function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation }) {
+function DetailClient({ client, token, moi, onRetour, onModifie, onVoirReclamation }) {
   const [nom, setNom] = useState(client.nom);
   const [prenom, setPrenom] = useState(client.prenom);
   const [email, setEmail] = useState(client.email);
@@ -84,6 +91,10 @@ function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation })
   const [codePostal, setCodePostal] = useState(client.adresse?.code_postal || "");
   const [ville, setVille] = useState(client.adresse?.ville || "");
   const [enCours, setEnCours] = useState(false);
+
+  const peutReinitialiserMdp = ROLES_RESET_MDP.includes(moi?.role);
+  const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
+  const [enCoursReset, setEnCoursReset] = useState(false);
 
   const [reclamations, setReclamations] = useState(null);
   const [erreurReclamations, setErreurReclamations] = useState("");
@@ -108,6 +119,10 @@ function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation })
       toast.error("Nom, prénom et email sont obligatoires.");
       return;
     }
+    if (telephone && !REGEX_TELEPHONE.test(telephone)) {
+      toast.error(MESSAGE_TELEPHONE);
+      return;
+    }
     setEnCours(true);
     const rep = await apiRequest(`/clients/${client.id}`, {
       method: "PATCH",
@@ -126,6 +141,29 @@ function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation })
       onModifie();
     } else if (rep.status === 422) {
       toast.error("Email invalide.");
+    } else {
+      toast.error(messageErreur(rep.status));
+    }
+  }
+
+  async function reinitialiserMotDePasse(e) {
+    e.preventDefault();
+    if (!REGEX_MOT_DE_PASSE.test(nouveauMotDePasse)) {
+      toast.error(MESSAGE_MOT_DE_PASSE);
+      return;
+    }
+    setEnCoursReset(true);
+    const rep = await apiRequest("/utilisateurs/reset-client", {
+      method: "POST",
+      token,
+      body: { client_id: client.id, nouveau_mot_de_passe: nouveauMotDePasse },
+    });
+    setEnCoursReset(false);
+    if (rep.ok) {
+      toast.success("Mot de passe réinitialisé.");
+      setNouveauMotDePasse("");
+    } else if (rep.status === 404) {
+      toast.error("Aucun compte client lié à cette fiche.");
     } else {
       toast.error(messageErreur(rep.status));
     }
@@ -155,7 +193,12 @@ function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation })
             </label>
             <label>
               Téléphone
-              <input value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+              <input
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                pattern={REGEX_TELEPHONE.source}
+                title={MESSAGE_TELEPHONE}
+              />
             </label>
             <label>
               Rue
@@ -179,6 +222,35 @@ function DetailClient({ client, token, onRetour, onModifie, onVoirReclamation })
           </button>
         </div>
       </form>
+
+      {peutReinitialiserMdp && (
+        <form className="carte formulaire-pro" onSubmit={reinitialiserMotDePasse}>
+          <div className="groupe-champs">
+            <h3>Réinitialiser le mot de passe</h3>
+            <p className="legende">
+              À utiliser si le client a oublié son mot de passe. Il pourra le changer ensuite.
+            </p>
+            <div className="champs-grille">
+              <label>
+                Nouveau mot de passe
+                <input
+                  type="password"
+                  value={nouveauMotDePasse}
+                  onChange={(e) => setNouveauMotDePasse(e.target.value)}
+                  pattern={REGEX_MOT_DE_PASSE.source}
+                  title={MESSAGE_MOT_DE_PASSE}
+                />
+              </label>
+            </div>
+          </div>
+          <div className="pied-formulaire">
+            <button type="submit" className="btn-primaire" disabled={enCoursReset}>
+              {enCoursReset && <Spinner taille={14} />}
+              Réinitialiser
+            </button>
+          </div>
+        </form>
+      )}
 
       <h2>Historique des réclamations</h2>
       {erreurReclamations && <p className="erreur">{erreurReclamations}</p>}

@@ -11,6 +11,7 @@ import NouvelleReclamation from "./pages/NouvelleReclamation";
 import Clients from "./pages/Clients";
 import Dashboard from "./pages/Dashboard";
 import Employes from "./pages/Employes";
+import MonProfil from "./pages/MonProfil";
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token"));
@@ -57,7 +58,8 @@ function App() {
     );
   }
 
-  const pages = ["Réclamations", "Nouvelle réclamation"];
+  const pages = ["Réclamations"];
+  if (moi?.role === "client" || moi?.role === "admin") pages.push("Nouvelle réclamation");
   if (moi?.role !== "client") pages.push("Clients");
   if (moi?.role === "responsable" || moi?.role === "admin") pages.push("Tableau de bord");
   if (moi?.role === "admin") pages.push("Employés");
@@ -65,6 +67,15 @@ function App() {
   return (
     <div className="app-shell">
       <ToasterTheme />
+      {moi?.role === "client" && (
+        <button
+          type="button"
+          className="btn-secondaire bouton-profil-flottant"
+          onClick={() => setPage("Mon profil")}
+        >
+          Mon profil
+        </button>
+      )}
       <Sidebar
         pages={pages}
         page={page}
@@ -77,10 +88,15 @@ function App() {
         {page === "Réclamations" && (
           <Reclamations token={token} moi={moi} cibleReclamation={cibleReclamation} />
         )}
-        {page === "Nouvelle réclamation" && <NouvelleReclamation token={token} moi={moi} />}
-        {page === "Clients" && <Clients token={token} onVoirReclamation={voirReclamation} />}
+        {page === "Nouvelle réclamation" && (moi?.role === "client" || moi?.role === "admin") && (
+          <NouvelleReclamation token={token} moi={moi} />
+        )}
+        {page === "Clients" && <Clients token={token} moi={moi} onVoirReclamation={voirReclamation} />}
         {page === "Tableau de bord" && <Dashboard token={token} />}
         {page === "Employés" && <Employes token={token} />}
+        {page === "Mon profil" && moi?.role === "client" && (
+          <MonProfil token={token} onRetour={() => setPage("Réclamations")} />
+        )}
       </main>
     </div>
   );
