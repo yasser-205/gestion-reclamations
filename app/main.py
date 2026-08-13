@@ -8,11 +8,11 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app):
-    db["reclamations"].create_index("statut")
-    db["reclamations"].create_index("client_id")
-    db["reclamations"].create_index("numero_reclamation", unique=True)
-    db["clients"].create_index("numero_client", unique=True)
-    db["utilisateurs"].create_index("login", unique=True)
+    db["reclamation"].create_index("statut")
+    db["reclamation"].create_index("client_id")
+    db["reclamation"].create_index("numero_reclamation", unique=True)
+    db["client"].create_index("numero_client", unique=True)
+    db["utilisateur"].create_index("login", unique=True)
     yield
 
 app = FastAPI(title="Gestion des réclamations", lifespan= lifespan)
@@ -30,14 +30,6 @@ app.include_router(reclamations.router)
 app.include_router(clients.router)
 app.include_router(utilisateurs.router)
 
-@app.on_event("startup")
-def creer_index():
-    db["reclamations"].create_index("statut")
-    db["reclamations"].create_index("client_id")
-    db["reclamations"].create_index("numero_reclamation", unique=True)
-    db["clients"].create_index("numero_client", unique=True)
-    db["utilisateurs"].create_index("login", unique=True)
-
 @app.get("/")
 def racine():
     return{"message": "API réclamations en ligne"}
@@ -49,5 +41,4 @@ def health():
         return{"status":"ok", "mongo" : "connecté"}
     except Exception as e :
         raise HTTPException(status_code=503, detail=f"mongo injoignable : {e}")
-
 
