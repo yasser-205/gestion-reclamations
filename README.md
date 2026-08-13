@@ -77,7 +77,6 @@ gestionnaire de test :
 
 ```powershell
 python creer_admin.py          # login: admin / mot de passe: admin123
-python creer_gestionnaire.py   # login: gest1 / mot de passe: gest123
 ```
 
 À changer ou supprimer avant toute mise en production. Les autres comptes clients
