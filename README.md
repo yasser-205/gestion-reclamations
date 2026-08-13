@@ -72,8 +72,7 @@ API disponible sur `http://127.0.0.1:8000` (docs interactives sur `/docs`).
 
 ### Comptes de démarrage
 
-La base est vide au premier lancement. Pour créer un compte admin et un compte
-gestionnaire de test :
+La base est vide au premier lancement. Pour créer un compte admin de test :
 
 ```powershell
 python creer_admin.py          # login: admin / mot de passe: admin123
