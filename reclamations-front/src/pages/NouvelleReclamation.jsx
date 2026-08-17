@@ -17,13 +17,53 @@ const TYPES_ATTESTATION = [
 const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
 const EXEMPLE_NUMERO_SINISTRE = "SIN-2026-000123";
 
+function prefixeAttestation(typeAttestation) {
+  return typeAttestation === "frontiere" ? "CF" : "C";
+}
+
+function assainirAttestation(typeAttestation, saisie) {
+  const prefixe = prefixeAttestation(typeAttestation);
+  let brut = saisie.toUpperCase();
+  if (brut.startsWith(prefixe)) brut = brut.slice(prefixe.length);
+  const chiffres = brut.replace(/[^0-9]/g, "").slice(0, 10);
+  let resultat = `${prefixe} ${chiffres.slice(0, 4)}`;
+  if (chiffres.length > 4) resultat += ` / ${chiffres.slice(4, 10)}`;
+  return resultat;
+}
+
+function assainirMatriculation(typeMatriculation, saisie) {
+  const maxPremier = typeMatriculation === "normale" ? 5 : 6;
+  const parties = saisie.toUpperCase().split("-");
+
+  const premier = (parties[0] || "").replace(/[^0-9]/g, "").slice(0, maxPremier);
+  let resultat = premier;
+
+  if (parties.length > 1) {
+    let milieu;
+    if (typeMatriculation === "normale") {
+      milieu = (parties[1] || "").replace(/[^A-Z]/g, "").slice(0, 1);
+    } else {
+      const code = typeMatriculation === "ww" ? "WW" : "RT";
+      milieu = (parties[1] || "").replace(/[^A-Z]/g, "").length > 0 ? code : "";
+    }
+    resultat += `-${milieu}`;
+
+    if (parties.length > 2) {
+      const dernier = (parties[2] || "").replace(/[^0-9]/g, "").slice(0, 2);
+      resultat += `-${dernier}`;
+    }
+  }
+
+  return resultat;
+}
+
 function NouvelleReclamation({ token, moi }) {
   const role = moi?.role;
   const monClientId = moi?.client_id;
 
   const [typeReclamation, setTypeReclamation] = useState("sinistre");
   const [typeAttestation, setTypeAttestation] = useState(TYPES_ATTESTATION[0].valeur);
-  const [attestation, setAttestation] = useState("");
+  const [attestation, setAttestation] = useState(`${prefixeAttestation(TYPES_ATTESTATION[0].valeur)} `);
   const [typeMatriculation, setTypeMatriculation] = useState(TYPES_MATRICULATION[0].valeur);
   const [matriculation, setMatriculation] = useState("");
   const [numeroSinistre, setNumeroSinistre] = useState("");
@@ -32,6 +72,17 @@ function NouvelleReclamation({ token, moi }) {
   const infoMatriculation = TYPES_MATRICULATION.find((t) => t.valeur === typeMatriculation);
   const formatAttestation = infoAttestation?.exemple || "";
   const formatMatriculation = infoMatriculation?.exemple || "";
+  const attestationRenseignee = attestation.replace(/[^0-9]/g, "").length > 0;
+
+  function changerTypeAttestation(valeur) {
+    setTypeAttestation(valeur);
+    setAttestation(`${prefixeAttestation(valeur)} `);
+  }
+
+  function changerTypeMatriculation(valeur) {
+    setTypeMatriculation(valeur);
+    setMatriculation("");
+  }
 
   const [clients, setClients] = useState([]);
   const [clientId, setClientId] = useState("");
@@ -67,11 +118,11 @@ function NouvelleReclamation({ token, moi }) {
       return;
     }
     if (typeReclamation === "production") {
-      if (!attestation && !matriculation) {
+      if (!attestationRenseignee && !matriculation) {
         setErreur("Pour une production, renseignez attestation ou matriculation.");
         return;
       }
-      if (attestation && !infoAttestation.regex.test(attestation)) {
+      if (attestationRenseignee && !infoAttestation.regex.test(attestation)) {
         setErreur(`L'attestation doit respecter le format ${formatAttestation}.`);
         return;
       }
@@ -101,7 +152,7 @@ function NouvelleReclamation({ token, moi }) {
       type_reclamation: typeReclamation,
       client_id: idClient,
       contrat: contrat || null,
-      attestation: attestation || null,
+      attestation: attestationRenseignee ? attestation : null,
       matriculation: matriculation || null,
       numero_sinistre: typeReclamation === "sinistre" ? numeroSinistre : null,
       canal,
@@ -118,7 +169,7 @@ function NouvelleReclamation({ token, moi }) {
       toast.success(`Réclamation ${rep.data.numero_reclamation} créée !`);
       setDescription("");
       setContrat("");
-      setAttestation("");
+      setAttestation(`${prefixeAttestation(typeAttestation)} `);
       setMatriculation("");
       setNumeroSinistre("");
     } else {
@@ -188,7 +239,7 @@ function NouvelleReclamation({ token, moi }) {
             <div className="champs-grille champs-grille-suite">
               <label>
                 Type d'attestation
-                <select value={typeAttestation} onChange={(e) => setTypeAttestation(e.target.value)}>
+                <select value={typeAttestation} onChange={(e) => changerTypeAttestation(e.target.value)}>
                   {TYPES_ATTESTATION.map((t) => (
                     <option key={t.valeur} value={t.valeur}>{t.label}</option>
                   ))}
@@ -199,7 +250,7 @@ function NouvelleReclamation({ token, moi }) {
                 <input
                   placeholder={formatAttestation}
                   value={attestation}
-                  onChange={(e) => setAttestation(e.target.value)}
+                  onChange={(e) => setAttestation(assainirAttestation(typeAttestation, e.target.value))}
                   pattern={infoAttestation.regex.source}
                 />
               </label>
@@ -208,7 +259,7 @@ function NouvelleReclamation({ token, moi }) {
               </p>
               <label>
                 Type de matriculation
-                <select value={typeMatriculation} onChange={(e) => setTypeMatriculation(e.target.value)}>
+                <select value={typeMatriculation} onChange={(e) => changerTypeMatriculation(e.target.value)}>
                   {TYPES_MATRICULATION.map((t) => (
                     <option key={t.valeur} value={t.valeur}>{t.label}</option>
                   ))}
@@ -219,7 +270,7 @@ function NouvelleReclamation({ token, moi }) {
                 <input
                   placeholder={formatMatriculation}
                   value={matriculation}
-                  onChange={(e) => setMatriculation(e.target.value)}
+                  onChange={(e) => setMatriculation(assainirMatriculation(typeMatriculation, e.target.value))}
                   pattern={infoMatriculation.regex.source}
                 />
               </label>

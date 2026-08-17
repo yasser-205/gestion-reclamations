@@ -16,7 +16,7 @@ def creer(
     return client_repo.creer_client(donnees.model_dump())
 
 @router.get("",response_model=list[ClientPublic])
-def lister(utilisateur: dict = Depends(exiger_role("agent", "gestionnaire", "responsable", "admin"))):
+def lister(utilisateur: dict = Depends(exiger_role("agent", "responsable", "admin"))):
     return client_repo.lister()
 
 

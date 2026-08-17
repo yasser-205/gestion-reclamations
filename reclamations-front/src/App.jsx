@@ -60,8 +60,8 @@ function App() {
 
   const pages = ["Réclamations"];
   if (moi?.role === "client" || moi?.role === "admin") pages.push("Nouvelle réclamation");
-  if (moi?.role !== "client") pages.push("Clients");
-  if (moi?.role === "responsable" || moi?.role === "admin") pages.push("Tableau de bord");
+  if (moi?.role !== "client" && moi?.role !== "gestionnaire") pages.push("Clients");
+  if (moi?.role === "gestionnaire" || moi?.role === "responsable" || moi?.role === "admin") pages.push("Tableau de bord");
   if (moi?.role === "admin") pages.push("Employés");
 
   return (

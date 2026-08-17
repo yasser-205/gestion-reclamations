@@ -34,8 +34,8 @@ mon_projet/
 |---|---|
 | `client` | Créer ses réclamations, consulter les siennes, lire les réponses |
 | `agent` | Consulter/lister les réclamations et clients |
-| `gestionnaire` | + changer le statut, répondre, modifier les détails d'une réclamation |
-| `responsable` | + affecter un gestionnaire, voir le tableau de bord |
+| `gestionnaire` | Consulter/lister les réclamations, changer le statut, répondre, modifier les détails d'une réclamation, voir le tableau de bord (pas d'accès aux clients) |
+| `responsable` | + affecter un gestionnaire |
 | `admin` | + créer/modifier les comptes employés, tout le reste |
 
 ## Prérequis

@@ -45,19 +45,18 @@ function BadgeEcheance({ reclamation }) {
 function Reclamations({ token, moi, cibleReclamation }) {
   const role = moi?.role;
   const estClient = role === "client";
-  const peutChangerStatut = ["gestionnaire", "responsable", "admin"].includes(role);
+  const peutGererReclamation = ["gestionnaire", "responsable", "admin"].includes(role);
   const peutAffecter = ["responsable", "admin"].includes(role);
-  const peutRepondre = peutChangerStatut;
   const [reclamations, setReclamations] = useState(null);
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [erreur, setErreur] = useState("");
 
   const [selectionId, setSelectionId] = useState("");
   const [modifierOuvert, setModifierOuvert] = useState(false);
-  const [nouveauStatut, setNouveauStatut] = useState(STATUTS[0]);
   const [gestionnaireChoisi, setGestionnaireChoisi] = useState("");
   const [reponseTexte, setReponseTexte] = useState("");
-  const [enCoursStatut, setEnCoursStatut] = useState(false);
+  const [enCoursPriseEnCharge, setEnCoursPriseEnCharge] = useState(false);
+  const [enCoursCloture, setEnCoursCloture] = useState(false);
   const [enCoursAffectation, setEnCoursAffectation] = useState(false);
   const [enCoursSuppression, setEnCoursSuppression] = useState(false);
   const [enCoursReponse, setEnCoursReponse] = useState(false);
@@ -71,6 +70,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
   const [pageActuelle, setPageActuelle] = useState(1);
   const [cleCibleTraitee, setCleCibleTraitee] = useState(null);
   const [triEcheance, setTriEcheance] = useState(null);
+  const [clientDetail, setClientDetail] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -94,7 +94,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
     const cible = reclamations.find((r) => r.id === cibleReclamation.id);
     if (cible) {
       setSelectionId(cible.id);
-      setNouveauStatut(cible.statut);
       setGestionnaireChoisi("");
       setReponseTexte(cible.reponse || "");
       setModifierOuvert(false);
@@ -108,6 +107,15 @@ function Reclamations({ token, moi, cibleReclamation }) {
   const gestionnaires = utilisateurs.filter((u) => u.role === "gestionnaire");
 
   const rec = reclamations?.find((r) => r.id === selectionId) || null;
+
+  useEffect(() => {
+    if (!rec) return;
+    let ignore = false;
+    apiRequest(`/clients/${rec.client_id}`, { token }).then((rep) => {
+      if (!ignore) setClientDetail(rep.ok ? rep.data : null);
+    });
+    return () => { ignore = true; };
+  }, [rec?.client_id, token]);
 
   const filtresActifs = recherche || filtreStatut || filtreMotif || dateDebut || dateFin;
 
@@ -168,7 +176,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
 
   function ouvrirDetail(r) {
     setSelectionId(r.id);
-    setNouveauStatut(r.statut);
     setGestionnaireChoisi("");
     setReponseTexte(r.reponse || "");
     setModifierOuvert(false);
@@ -178,16 +185,31 @@ function Reclamations({ token, moi, cibleReclamation }) {
     setSelectionId("");
   }
 
-  async function appliquerStatut() {
-    setEnCoursStatut(true);
+  async function prendreEnCharge() {
+    setEnCoursPriseEnCharge(true);
+    const rep = await apiRequest(`/reclamation/${rec.id}/prendre-en-charge`, {
+      method: "POST",
+      token,
+    });
+    setEnCoursPriseEnCharge(false);
+    if (rep.ok) {
+      toast.success("Réclamation prise en charge.");
+      setRecharge((n) => n + 1);
+    } else {
+      toast.error(messageErreur(rep.status));
+    }
+  }
+
+  async function cloturer() {
+    setEnCoursCloture(true);
     const rep = await apiRequest(`/reclamation/${rec.id}/statut`, {
       method: "PATCH",
       token,
-      body: { statut: nouveauStatut },
+      body: { statut: "cloturee" },
     });
-    setEnCoursStatut(false);
+    setEnCoursCloture(false);
     if (rep.ok) {
-      toast.success("Statut mis à jour.");
+      toast.success("Réclamation clôturée.");
       setRecharge((n) => n + 1);
     } else {
       toast.error(messageErreur(rep.status));
@@ -220,6 +242,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
     setEnCoursReponse(false);
     if (rep.ok) {
       toast.success("Réponse envoyée.");
+      setReponseTexte("");
       setRecharge((n) => n + 1);
     } else {
       toast.error(messageErreur(rep.status));
@@ -252,12 +275,20 @@ function Reclamations({ token, moi, cibleReclamation }) {
   }
 
   if (rec) {
+    const peutPrendreEnCharge = role === "gestionnaire" && rec.statut === "nouvelle";
+    const peutCloturer = role === "gestionnaire" && rec.statut !== "nouvelle" && rec.statut !== "cloturee";
+    const peutRepondre =
+      rec.statut !== "cloturee" &&
+      (role === "responsable" || role === "admin"
+        ? true
+        : role === "gestionnaire" && rec.gestionnaire_id === moi?.id);
+
     return (
       <div className="page">
         <div className="entete-detail">
           <button type="button" className="btn-secondaire" onClick={retourListe}>← Retour à la liste</button>
           <div className="boutons-ligne">
-            {peutChangerStatut && !modifierOuvert && (
+            {peutGererReclamation && !modifierOuvert && (
               <button type="button" className="btn-secondaire" onClick={() => setModifierOuvert(true)}>
                 Modifier les détails
               </button>
@@ -307,6 +338,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
                 <p><strong>Reçue le :</strong> {rec.date_reception.slice(0, 10)}</p>
                 <p><strong>Échéance :</strong> <BadgeEcheance reclamation={rec} /></p>
                 <p><strong>Gestionnaire :</strong> {nomsGestionnaires[rec.gestionnaire_id] || "non affecté"}</p>
+                <p><strong>Téléphone du client :</strong> {clientDetail?.id === rec.client_id ? clientDetail.telephone : "…"}</p>
               </div>
             </div>
 
@@ -328,20 +360,26 @@ function Reclamations({ token, moi, cibleReclamation }) {
           ))}
         </ul>
 
-        {(peutChangerStatut || peutAffecter) && (
+        {(peutPrendreEnCharge || peutCloturer || peutAffecter) && (
           <>
             <hr />
             <h3>Action</h3>
             <div className="colonnes">
-              {peutChangerStatut && (
+              {peutPrendreEnCharge && (
                 <div>
-                  <p>Changer le statut</p>
-                  <select value={nouveauStatut} onChange={(e) => setNouveauStatut(e.target.value)}>
-                    {STATUTS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <button type="button" onClick={appliquerStatut} disabled={enCoursStatut}>
-                    {enCoursStatut && <Spinner taille={14} />}
-                    Appliquer le statut
+                  <p>Prise en charge</p>
+                  <button type="button" onClick={prendreEnCharge} disabled={enCoursPriseEnCharge}>
+                    {enCoursPriseEnCharge && <Spinner taille={14} />}
+                    Prise en charge
+                  </button>
+                </div>
+              )}
+              {peutCloturer && (
+                <div>
+                  <p>Clôturer la réclamation</p>
+                  <button type="button" onClick={cloturer} disabled={enCoursCloture}>
+                    {enCoursCloture && <Spinner taille={14} />}
+                    Clôturer
                   </button>
                 </div>
               )}

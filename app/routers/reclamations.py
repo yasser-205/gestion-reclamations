@@ -31,7 +31,7 @@ def lister(client_id: Optional[str] = None, utilisateur: dict = Depends(get_util
     return reclamation_repo.lister(client_id=client_id)
 
 @router.get("/stat")
-def stats(utilisateur: dict = Depends(exiger_role("responsable", "admin"))):
+def stats(utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin"))):
     return reclamation_repo.statistique()
 
 @router.get("/{id}", response_model=ReclamationPublic)
@@ -118,6 +118,19 @@ def changer_statut(
         raise HTTPException(status_code=404, detail="réclamation introuvable")
     return reclamation  
 
+@router.post("/{id}/prendre-en-charge", response_model=ReclamationPublic)
+def prendre_en_charge(
+    id: str,
+    utilisateur: dict = Depends(exiger_role("gestionnaire")),
+):
+    gestionnaire_nom = f"{utilisateur['prenom']} {utilisateur['nom']}"
+    reclamation = reclamation_repo.affecter_gestionnaire(
+        id, utilisateur["id"], gestionnaire_nom, gestionnaire_nom
+    )
+    if reclamation is None:
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+    return reclamation
+
 class Affectation(BaseModel):
     gestionnaire_id: str
 
@@ -153,6 +166,17 @@ def repondre(
     donnees: Reponse,
     utilisateur: dict = Depends(exiger_role("gestionnaire","responsable","admin"))
 ):
+    reclamation_existante = reclamation_repo.get_par_id(id)
+    if reclamation_existante is None:
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+    if reclamation_existante.get("statut") == "cloturee":
+        raise HTTPException(status_code=400, detail="Impossible de répondre à une réclamation clôturée")
+    if utilisateur["role"] == "gestionnaire" and reclamation_existante.get("gestionnaire_id") != utilisateur["id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Seul le gestionnaire en charge de cette réclamation peut y répondre",
+        )
+
     auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
     reclamation = reclamation_repo.repondre(id, donnees.reponse, auteur)
     if reclamation is None:
