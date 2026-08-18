@@ -57,6 +57,16 @@ function assainirMatriculation(typeMatriculation, saisie) {
   return resultat;
 }
 
+function assainirNumeroSinistre(saisie) {
+  const prefixe = "SIN-";
+  let brut = saisie.toUpperCase();
+  if (brut.startsWith(prefixe)) brut = brut.slice(prefixe.length);
+  const chiffres = brut.replace(/[^0-9]/g, "").slice(0, 10);
+  let resultat = `${prefixe}${chiffres.slice(0, 4)}`;
+  if (chiffres.length > 4) resultat += `-${chiffres.slice(4, 10)}`;
+  return resultat;
+}
+
 function NouvelleReclamation({ token, moi }) {
   const role = moi?.role;
   const monClientId = moi?.client_id;
@@ -66,7 +76,7 @@ function NouvelleReclamation({ token, moi }) {
   const [attestation, setAttestation] = useState(`${prefixeAttestation(TYPES_ATTESTATION[0].valeur)} `);
   const [typeMatriculation, setTypeMatriculation] = useState(TYPES_MATRICULATION[0].valeur);
   const [matriculation, setMatriculation] = useState("");
-  const [numeroSinistre, setNumeroSinistre] = useState("");
+  const [numeroSinistre, setNumeroSinistre] = useState("SIN-");
 
   const infoAttestation = TYPES_ATTESTATION.find((t) => t.valeur === typeAttestation);
   const infoMatriculation = TYPES_MATRICULATION.find((t) => t.valeur === typeMatriculation);
@@ -134,10 +144,6 @@ function NouvelleReclamation({ token, moi }) {
       }
     }
     if (typeReclamation === "sinistre") {
-      if (!numeroSinistre) {
-        setErreur("Le numéro de sinistre est obligatoire.");
-        return;
-      }
       if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
         setErreur(`Le numéro de sinistre doit respecter le format ${EXEMPLE_NUMERO_SINISTRE}.`);
         return;
@@ -188,7 +194,7 @@ function NouvelleReclamation({ token, moi }) {
     setContrat("");
     setAttestation(`${prefixeAttestation(typeAttestation)} `);
     setMatriculation("");
-    setNumeroSinistre("");
+    setNumeroSinistre("SIN-");
     setFichiers([]);
     setCleChampFichiers((n) => n + 1);
   }
@@ -240,7 +246,7 @@ function NouvelleReclamation({ token, moi }) {
                 <input
                   placeholder={EXEMPLE_NUMERO_SINISTRE}
                   value={numeroSinistre}
-                  onChange={(e) => setNumeroSinistre(e.target.value)}
+                  onChange={(e) => setNumeroSinistre(assainirNumeroSinistre(e.target.value))}
                   pattern="^SIN-\d{4}-\d{6}$"
                   required
                 />

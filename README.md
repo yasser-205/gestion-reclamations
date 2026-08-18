@@ -13,7 +13,7 @@ mon_projet/
 ├── app/                    Backend FastAPI
 │   ├── main.py              Point d'entrée, montage des routers, CORS
 │   ├── config.py            Lecture de la configuration (.env)
-│   ├── database.py          Connexion MongoDB
+│   ├── database.py          Connexion MongoDB + GridFS (stockage des pièces jointes)
 │   ├── core/                 Sécurité (JWT, hachage), dépendances d'auth/rôles
 │   ├── models/                Schémas Pydantic
 │   ├── repositories/          Accès aux données (MongoDB)
@@ -34,8 +34,8 @@ mon_projet/
 |---|---|
 | `client` | Créer ses réclamations, consulter les siennes, lire les réponses |
 | `agent` | Consulter/lister les réclamations et clients |
-| `gestionnaire` | Consulter/lister les réclamations, changer le statut, répondre, modifier les détails d'une réclamation, voir le tableau de bord (pas d'accès aux clients) |
-| `responsable` | + affecter un gestionnaire |
+| `gestionnaire` | Consulter/lister les réclamations, modifier les détails d'une réclamation, prendre en charge une réclamation (`nouvelle` → `affectée`), la clôturer, y répondre (seulement si elle lui est affectée et tant qu'elle n'est pas clôturée), voir le tableau de bord (pas d'accès aux clients) |
+| `responsable` | + affecter un gestionnaire à une réclamation, répondre à n'importe quelle réclamation non clôturée |
 | `admin` | + créer/modifier les comptes employés, tout le reste |
 
 ## Prérequis
@@ -99,9 +99,14 @@ Autres scripts npm : `npm run build` (production), `npm run lint`, `npm run prev
 ## Fonctionnalités principales
 
 - Authentification par token JWT, inscription client en libre-service
-- Réclamations : création, filtres (statut/motif/dates/recherche), tri par échéance,
-  pagination, export CSV, modification, changement de statut, affectation à un
-  gestionnaire, réponse au client, alertes d'échéance à venir/dépassée
+- Réclamations : création (avec pièces jointes optionnelles), filtres
+  (statut/motif/dates/recherche), tri par échéance, pagination, export CSV,
+  modification, prise en charge par un gestionnaire (`nouvelle` → `affectée`),
+  clôture, affectation manuelle à un gestionnaire (responsable/admin), réponse au
+  client (réservée au gestionnaire en charge ou à un responsable/admin, tant que la
+  réclamation n'est pas clôturée), alertes d'échéance à venir/dépassée
+- Pièces jointes : ajout de fichiers à la création d'une réclamation, stockage dans
+  MongoDB (GridFS), consultation/téléchargement depuis le détail de la réclamation
 - Clients : liste, fiche modifiable, historique de leurs réclamations
 - Employés : création et modification des comptes du personnel (admin)
 - Tableau de bord : indicateurs clés (total, délai moyen, taux dans les délais) et
