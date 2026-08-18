@@ -1,5 +1,9 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
+from bson.errors import InvalidId
+from gridfs.errors import NoFile
+import io
 from app.models.reclamation import (
     ReclamationCreation,
     ReclamationPublic,
@@ -10,7 +14,7 @@ from app.models.reclamation import (
     REGEX_ATTESTATION,
     REGEX_MATRICULATION,
 )
-from app.repositories import reclamation_repo, utilisateur_repo
+from app.repositories import reclamation_repo, utilisateur_repo, fichier_repo
 from app.core.dependances import get_utilisateur_courant, exiger_role
 from pydantic import BaseModel, field_validator
 
@@ -33,6 +37,28 @@ def lister(client_id: Optional[str] = None, utilisateur: dict = Depends(get_util
 @router.get("/stat")
 def stats(utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin"))):
     return reclamation_repo.statistique()
+
+@router.get("/pieces-jointes/{file_id}")
+def telecharger_piece(
+    file_id: str,
+    utilisateur: dict = Depends(get_utilisateur_courant),
+):
+    reclamation = reclamation_repo.get_par_piece_jointe(file_id)
+    if reclamation is None:
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    if utilisateur["role"] == "client" and reclamation["client_id"] != utilisateur.get("client_id"):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+
+    try:
+        fichier = fichier_repo.recuperer(file_id)
+    except (InvalidId, NoFile):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+
+    return StreamingResponse(
+        io.BytesIO(fichier.read()),
+        media_type = fichier.content_type,
+        headers={"Content-Disposition": f'inline; filename="{fichier.filename}"'},
+    )
 
 @router.get("/{id}", response_model=ReclamationPublic)
 def consulter(id: str, utilisateur: dict = Depends(get_utilisateur_courant)):
@@ -182,3 +208,31 @@ def repondre(
     if reclamation is None:
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
     return reclamation
+
+@router.post("/{id}/pieces_jointes", response_model=ReclamationPublic)
+async def ajouter_pieces(
+    id: str,
+    fichiers: list[UploadFile] = File(...),
+    utilisateur: dict = Depends(get_utilisateur_courant),
+):
+    reclamation = reclamation_repo.get_par_id(id)
+    if reclamation is None:
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+    if utilisateur["role"] == "client" and reclamation["client_id"] != utilisateur.get("client_id"):
+        raise HTTPException(status_code=404, detail="Réclamation introuvable")
+
+    auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
+    for fichier in fichiers:
+        contenu = await fichier.read()
+        file_id = fichier_repo.enregistrer(contenu, fichier.filename, fichier.content_type)
+        piece = {
+            "file_id": file_id,
+            "nom": fichier.filename,
+            "type": fichier.content_type,
+        }
+        reclamation = reclamation_repo.ajoute_piece_jointe(id, piece, auteur)
+
+    return reclamation
+
+
+

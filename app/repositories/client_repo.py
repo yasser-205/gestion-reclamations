@@ -10,8 +10,13 @@ def _serealiser(doc:dict) -> dict:
 
 def _generer_numero() -> str :
     annee = datetime.now(timezone.utc).year
-    compte= collection.count_documents({}) + 1
-    return f"CLI-{annee}-{compte:05d}"
+    prefixe = f"CLI-{annee}-"
+    dernier = collection.find_one(
+        {"numero_client": {"$regex": f"^{prefixe}"}},
+        sort=[("numero_client", -1)],
+    )
+    dernier_compte = int(dernier["numero_client"].split("-")[-1]) if dernier else 0
+    return f"{prefixe}{dernier_compte + 1:05d}"
 
 def creer_client(donnees: dict) -> dict:
     donnees["numero_client"] = _generer_numero()

@@ -24,6 +24,49 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
   return { ok: reponse.ok, status: reponse.status, data };
 }
 
+export async function apiUpload(path, { fichiers = [], token } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const formData = new FormData();
+  fichiers.forEach((fichier) => formData.append("fichiers", fichier));
+
+  let reponse;
+  try {
+    reponse = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+
+  let data = null;
+  try {
+    data = await reponse.json();
+  } catch {
+    // corps de réponse vide ou non-JSON
+  }
+  return { ok: reponse.ok, status: reponse.status, data };
+}
+
+export async function apiOuvrirFichier(path, token) {
+  try {
+    const reponse = await fetch(`${API_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!reponse.ok) return false;
+    const blob = await reponse.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function messageErreur(status, defaut = "") {
   if (status === 0) return "Impossible de joindre l'API.";
   if (defaut) return defaut;

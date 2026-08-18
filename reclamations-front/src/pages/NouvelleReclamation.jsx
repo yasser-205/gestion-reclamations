@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { apiRequest, messageErreur } from "../api";
+import { apiRequest, apiUpload, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
 const TYPES_MATRICULATION = [
@@ -93,6 +93,8 @@ function NouvelleReclamation({ token, moi }) {
   const [motif, setMotif] = useState("remboursement");
   const [priorite, setPriorite] = useState("moyenne");
   const [description, setDescription] = useState("");
+  const [fichiers, setFichiers] = useState([]);
+  const [cleChampFichiers, setCleChampFichiers] = useState(0);
 
   const [erreur, setErreur] = useState("");
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
@@ -163,18 +165,32 @@ function NouvelleReclamation({ token, moi }) {
 
     setEnvoiEnCours(true);
     const rep = await apiRequest("/reclamation", { method: "POST", token, body: corps });
-    setEnvoiEnCours(false);
 
-    if (rep.ok) {
-      toast.success(`Réclamation ${rep.data.numero_reclamation} créée !`);
-      setDescription("");
-      setContrat("");
-      setAttestation(`${prefixeAttestation(typeAttestation)} `);
-      setMatriculation("");
-      setNumeroSinistre("");
-    } else {
+    if (!rep.ok) {
+      setEnvoiEnCours(false);
       setErreur(messageErreur(rep.status));
+      return;
     }
+
+    if (fichiers.length > 0) {
+      const repFichiers = await apiUpload(`/reclamation/${rep.data.id}/pieces_jointes`, {
+        fichiers,
+        token,
+      });
+      if (!repFichiers.ok) {
+        toast.error("Réclamation créée, mais l'envoi des pièces jointes a échoué.");
+      }
+    }
+
+    setEnvoiEnCours(false);
+    toast.success(`Réclamation ${rep.data.numero_reclamation} créée !`);
+    setDescription("");
+    setContrat("");
+    setAttestation(`${prefixeAttestation(typeAttestation)} `);
+    setMatriculation("");
+    setNumeroSinistre("");
+    setFichiers([]);
+    setCleChampFichiers((n) => n + 1);
   }
 
   if (role && role !== "client" && !chargementClients && clients.length === 0 && !erreur) {
@@ -356,6 +372,19 @@ function NouvelleReclamation({ token, moi }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </div>
+
+        <div className="groupe-champs">
+          <h3>Pièces jointes (optionnel)</h3>
+          <input
+            key={cleChampFichiers}
+            type="file"
+            multiple
+            onChange={(e) => setFichiers(Array.from(e.target.files))}
+          />
+          {fichiers.length > 0 && (
+            <p className="legende">{fichiers.length} fichier(s) sélectionné(s)</p>
+          )}
         </div>
 
         {erreur && <p className="erreur">{erreur}</p>}

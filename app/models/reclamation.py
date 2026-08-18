@@ -114,3 +114,4 @@ class ReclamationPublic(ReclamationBase):
     date_cloture: Optional[datetime] = None
     reponse: Optional[str] = None
     historique: list[ActionHistorique]= []
+    pieces_jointes: list[dict] = [] 

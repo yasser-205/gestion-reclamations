@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { apiRequest, messageErreur } from "../api";
+import { apiRequest, apiOuvrirFichier, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
 const STATUTS = [
@@ -216,6 +216,11 @@ function Reclamations({ token, moi, cibleReclamation }) {
     }
   }
 
+  async function ouvrirPieceJointe(fileId) {
+    const ok = await apiOuvrirFichier(`/reclamation/pieces-jointes/${fileId}`, token);
+    if (!ok) toast.error("Impossible d'ouvrir le fichier.");
+  }
+
   async function affecter() {
     setEnCoursAffectation(true);
     const rep = await apiRequest(`/reclamation/${rec.id}/affecter`, {
@@ -348,6 +353,25 @@ function Reclamations({ token, moi, cibleReclamation }) {
               <>
                 <h3>Réponse</h3>
                 <p className="reponse-existante">{rec.reponse}</p>
+              </>
+            )}
+
+            {rec.pieces_jointes && rec.pieces_jointes.length > 0 && (
+              <>
+                <h3>Pièces jointes</h3>
+                <ul className="pieces-jointes">
+                  {rec.pieces_jointes.map((piece, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        className="lien-piece-jointe"
+                        onClick={() => ouvrirPieceJointe(piece.file_id)}
+                      >
+                        {piece.nom}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </>
             )}
           </>

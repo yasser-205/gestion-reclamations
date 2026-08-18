@@ -12,8 +12,13 @@ def _serialiser(doc: dict) ->dict:
 
 def _generer_numero() ->str:
     annee = datetime.now(timezone.utc).year
-    compte = collection.count_documents({}) + 1
-    return f"REC-{annee}-{compte:05d}"
+    prefixe = f"REC-{annee}-"
+    dernier = collection.find_one(
+        {"numero_reclamation": {"$regex": f"^{prefixe}"}},
+        sort=[("numero_reclamation", -1)],
+    )
+    dernier_compte = int(dernier["numero_reclamation"].split("-")[-1]) if dernier else 0
+    return f"{prefixe}{dernier_compte + 1:05d}"
 
 def creer_reclamation(donnees: dict, auteur:str) -> dict:
     maintenant = datetime.now(timezone.utc)
@@ -39,6 +44,10 @@ def lister(client_id: str | None = None) -> list[dict]:
 
 def get_par_id(id:str) -> dict |None:
     doc = collection.find_one({"_id": ObjectId(id)})
+    return _serialiser(doc) if doc else None
+
+def get_par_piece_jointe(file_id: str) -> dict | None:
+    doc = collection.find_one({"pieces_jointes.file_id": file_id})
     return _serialiser(doc) if doc else None
 
 STATUTS_CLOTURE = {"resolue", "cloturee", "rejetee"}
@@ -163,6 +172,27 @@ def statistique() -> dict:
         "taux_dans_delais": taux_dans_delais,
         "par_mois": par_mois,
     }
+
+def ajoute_piece_jointe(id: str, piece: dict, auteur: str) -> dict | None:
+    reclamation = collection.find_one({"_id": ObjectId(id)})
+    if reclamation is None:
+        return None
+
+    maintenant = datetime.now(timezone.utc)
+
+    maj = {
+        "pieces_jointes": reclamation.get("pieces_jointes", []) + [piece],
+        "historique": reclamation["historique"] + [
+            {
+                "date": maintenant,
+                "auteur": auteur,
+                "action": f"Pièce jointe ajoutée : {piece['nom']}",
+            }
+        ],
+    }
+
+    collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
+    return _serialiser(collection.find_one({"_id": ObjectId(id)}))
 
 def repondre(id:str, reponse:str, auteur:str) -> dict | None:
     reclamation = collection.find_one({"_id": ObjectId(id)})
