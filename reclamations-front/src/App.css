@@ -36,24 +36,6 @@
   height: 24px;
   object-fit: contain;
 }
-.sidebar-entete {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sidebar .theme-toggle {
-  background: var(--sidebar-surface);
-  border-color: var(--sidebar-surface-border);
-}
-.sidebar > button.btn-secondaire {
-  color: var(--sidebar-text);
-  border-color: var(--sidebar-surface-border);
-}
-.sidebar > button.btn-secondaire:hover:not(:disabled) {
-  background: var(--sidebar-surface);
-  border-color: var(--sidebar-surface-border);
-}
-
 .theme-toggle-flottant {
   position: fixed;
   top: 16px;
@@ -68,6 +50,34 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.menu-profil-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--ombre);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 20;
+}
+.menu-profil-dropdown button {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-h);
+}
+.menu-profil-dropdown button:hover:not(:disabled) {
+  background: var(--bg-soft);
 }
 
 .salutation-profil {

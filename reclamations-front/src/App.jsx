@@ -6,6 +6,7 @@ import { useTheme } from "./useTheme";
 import ThemeToggle from "./components/ThemeToggle";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
+import MenuProfil from "./components/MenuProfil";
 import Reclamations from "./pages/Reclamations";
 import NouvelleReclamation from "./pages/NouvelleReclamation";
 import Clients from "./pages/Clients";
@@ -68,26 +69,18 @@ function App() {
     <div className="app-shell">
       <ToasterTheme />
       {moi && (
-        <div className="barre-profil-flottante">
-          <span className="salutation-profil">Bonjour {moi.prenom}</span>
-          <button
-            type="button"
-            className="bouton-avatar-profil"
-            onClick={() => setPage("Mon profil")}
-            title="Mon profil"
-            aria-label="Mon profil"
-          >
-            {moi.prenom ? moi.prenom[0].toUpperCase() : "?"}
-          </button>
-        </div>
+        <MenuProfil
+          prenom={moi.prenom}
+          theme={theme}
+          onBasculerTheme={basculerTheme}
+          onVoirProfil={() => setPage("Mon profil")}
+          onDeconnecter={deconnecter}
+        />
       )}
       <Sidebar
         pages={pages}
         page={page}
         onChangerPage={setPage}
-        onDeconnecter={deconnecter}
-        theme={theme}
-        onBasculerTheme={basculerTheme}
       />
       <main className="contenu">
         {page === "Réclamations" && (
