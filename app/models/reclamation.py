@@ -26,25 +26,24 @@ class TypeReclamation(str, Enum):
     sinistre = "sinistre"
     production = "production"
 
-class Priorite(str,Enum):
-    basse = "basse"
-    moyenne = "moyenne"
-    haute = "haute"
-    urgente = "urgente"
-
 class Statut(str,Enum):
     nouvelle = "nouvelle"
     affectee = "affectee"
     en_cours = "en_cours"
     en_attente_client = "en_attente_client"
-    resolue = "resolue"
     cloturee = "cloturee"
-    rejetee= "rejetee"
 
 class ActionHistorique(BaseModel):
     date : datetime
-    auteur: str    
+    auteur: str
     action: str
+
+class MessageReponse(BaseModel):
+    date: datetime
+    auteur: str
+    role: str
+    texte: str
+    pieces_jointes: list[dict] = []
 
 class ReclamationBase(BaseModel):
     type_reclamation: TypeReclamation = TypeReclamation.production
@@ -53,7 +52,6 @@ class ReclamationBase(BaseModel):
     canal : Canal
     motif : Motif
     description : str
-    priorite: Priorite = Priorite.moyenne
     attestation: Optional[str] = None
     matriculation: Optional[str] = None
     numero_sinistre: Optional[str] = None
@@ -110,8 +108,7 @@ class ReclamationPublic(ReclamationBase):
     statut: Statut
     gestionnaire_id : Optional[str] = None
     date_reception: datetime
-    date_echeance: Optional[datetime] = None
     date_cloture: Optional[datetime] = None
-    reponse: Optional[str] = None
+    reponses: list[MessageReponse] = []
     historique: list[ActionHistorique]= []
-    pieces_jointes: list[dict] = [] 
+    pieces_jointes: list[dict] = []

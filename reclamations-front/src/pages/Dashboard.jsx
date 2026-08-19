@@ -14,10 +14,10 @@ import {
 import { apiRequest, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 
-const SERIE = { light: "#2a78d6", dark: "#3987e5" };
+const SERIE = { light: "#1d7e97", dark: "#39bee0" };
 const CHROME = {
-  light: { grille: "#e5e4e7", axe: "#c3c2b7", texte: "#6b6375", texteH: "#08060d", surface: "#ffffff", bordure: "#e5e4e7" },
-  dark: { grille: "#2e303a", axe: "#383835", texte: "#9ca3af", texteH: "#f3f4f6", surface: "#16171d", bordure: "#2e303a" },
+  light: { grille: "#d7e3e5", axe: "#c3d4d7", texte: "#55666d", texteH: "#2a2d30", surface: "#ffffff", bordure: "#d7e3e5" },
+  dark: { grille: "#253f49", axe: "#3a5560", texte: "#9fb4bc", texteH: "#eaf2f3", surface: "#0d1a20", bordure: "#253f49" },
 };
 
 const MOIS_ABBR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -88,10 +88,6 @@ function Dashboard({ token }) {
         <div className="tuile-kpi">
           <p className="etiquette">Délai moyen de traitement</p>
           <p className="valeur">{stats.delai_moyen} <span className="unite">j</span></p>
-        </div>
-        <div className="tuile-kpi">
-          <p className="etiquette">Résolues dans les délais</p>
-          <p className="valeur">{stats.taux_dans_delais} <span className="unite">%</span></p>
         </div>
       </div>
 

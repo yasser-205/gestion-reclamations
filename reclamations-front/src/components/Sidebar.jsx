@@ -4,7 +4,10 @@ function Sidebar({ pages, page, onChangerPage, onDeconnecter, theme, onBasculerT
   return (
     <aside className="sidebar">
       <div className="sidebar-entete">
-        <h2>Menu</h2>
+        <div className="sidebar-marque">
+          <img src="/mark-cat.png" alt="CAT" className="sidebar-mark" />
+          <h2>CAT</h2>
+        </div>
         <ThemeToggle theme={theme} onBasculer={onBasculerTheme} />
       </div>
       <button type="button" className="btn-secondaire" onClick={onDeconnecter}>

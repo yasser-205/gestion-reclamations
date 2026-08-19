@@ -101,7 +101,6 @@ function NouvelleReclamation({ token, moi }) {
   const [contrat, setContrat] = useState("");
   const [canal, setCanal] = useState("telephone");
   const [motif, setMotif] = useState("remboursement");
-  const [priorite, setPriorite] = useState("moyenne");
   const [description, setDescription] = useState("");
   const [fichiers, setFichiers] = useState([]);
   const [cleChampFichiers, setCleChampFichiers] = useState(0);
@@ -166,7 +165,6 @@ function NouvelleReclamation({ token, moi }) {
       canal,
       motif,
       description,
-      priorite,
     };
 
     setEnvoiEnCours(true);
@@ -349,18 +347,6 @@ function NouvelleReclamation({ token, moi }) {
                 <option value="autre">Autre</option>
               </select>
             </label>
-
-            {role !== "client" && (
-              <label>
-                Priorité
-                <select value={priorite} onChange={(e) => setPriorite(e.target.value)}>
-                  <option value="basse">Basse</option>
-                  <option value="moyenne">Moyenne</option>
-                  <option value="haute">Haute</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </label>
-            )}
 
             <label>
               Numéro de contrat (optionnel)

@@ -1,10 +1,8 @@
 from bson import ObjectId
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from app.database import db
 
 collection = db["reclamation"]
-
-DELAI_TRAITEMENT_JOURS = 15
 
 def _serialiser(doc: dict) ->dict:
     doc["id"]  = str(doc.pop("_id"))
@@ -27,9 +25,8 @@ def creer_reclamation(donnees: dict, auteur:str) -> dict:
     donnees["statut"] = "nouvelle"
     donnees["gestionnaire_id"] = None
     donnees["date_reception"] = maintenant
-    donnees["date_echeance"] = maintenant + timedelta(days=DELAI_TRAITEMENT_JOURS)
     donnees["date_cloture"] = None
-    donnees["reponse"] = None
+    donnees["reponses"] = []
     donnees["historique"] = [
         {"date": maintenant, "auteur": auteur, "action":"Réclamation créée"}
     ]
@@ -47,10 +44,13 @@ def get_par_id(id:str) -> dict |None:
     return _serialiser(doc) if doc else None
 
 def get_par_piece_jointe(file_id: str) -> dict | None:
-    doc = collection.find_one({"pieces_jointes.file_id": file_id})
+    doc = collection.find_one({
+        "$or": [
+            {"pieces_jointes.file_id": file_id},
+            {"reponses.pieces_jointes.file_id": file_id},
+        ]
+    })
     return _serialiser(doc) if doc else None
-
-STATUTS_CLOTURE = {"resolue", "cloturee", "rejetee"}
 
 def changer_statut(id:str, nouveau_statut:str, auteur:str) -> dict |None:
     reclamation = collection.find_one({"_id":ObjectId(id)})
@@ -69,7 +69,7 @@ def changer_statut(id:str, nouveau_statut:str, auteur:str) -> dict |None:
             }
         ],
     }
-    if nouveau_statut in STATUTS_CLOTURE:
+    if nouveau_statut == "cloturee":
         maj["date_cloture"] = maintenant
 
     collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
@@ -148,14 +148,6 @@ def statistique() -> dict:
             durees.append(duree)
     delai_moyen = round(sum(durees) / len(durees), 1) if durees else 0
 
-# Taux résolu dans les délais
-    closes = [r for r in reclamations if r.get("date_cloture")]
-    dans_delais = [
-        r for r in closes
-        if r.get("date_echeance") and r["date_cloture"] <= r["date_echeance"]
-    ]
-    taux_dans_delais = round(len(dans_delais)/len(closes) * 100, 1) if closes else 0
-
 # Évolution par mois de réception
     par_mois = {}
     for r in reclamations:
@@ -169,7 +161,6 @@ def statistique() -> dict:
         "par_motif": par_motif,
         "par_gestionnaire": par_gestionnaire,
         "delai_moyen": delai_moyen,
-        "taux_dans_delais": taux_dans_delais,
         "par_mois": par_mois,
     }
 
@@ -194,23 +185,27 @@ def ajoute_piece_jointe(id: str, piece: dict, auteur: str) -> dict | None:
     collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
     return _serialiser(collection.find_one({"_id": ObjectId(id)}))
 
-def repondre(id:str, reponse:str, auteur:str) -> dict | None:
+def ajouter_reponse(id: str, texte: str, auteur: str, role: str, pieces_jointes: list[dict]) -> dict | None:
     reclamation = collection.find_one({"_id": ObjectId(id)})
     if reclamation is None:
         return None
 
     maintenant = datetime.now(timezone.utc)
 
-    maj = {
-        "reponse": reponse,
-        "historique":reclamation["historique"] + [
-            {
-                "date": maintenant,
-                "auteur": auteur,
-                "action": "Réponse apportée",
-            }
-        ]
+    message = {
+        "date": maintenant,
+        "auteur": auteur,
+        "role": role,
+        "texte": texte,
+        "pieces_jointes": pieces_jointes,
     }
 
-    collection.update_one({"_id": ObjectId(id)}, {"$set" : maj})
-    return _serialiser(collection.find_one({"_id" : ObjectId(id)}))
+    nouveau_statut = "en_cours" if role == "client" else "en_attente_client"
+
+    maj = {
+        "reponses": reclamation.get("reponses", []) + [message],
+        "statut": nouveau_statut,
+    }
+
+    collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
+    return _serialiser(collection.find_one({"_id": ObjectId(id)}))

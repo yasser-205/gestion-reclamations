@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { apiRequest, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
+import StatutPill from "../components/StatutPill";
 
 const REGEX_TELEPHONE = /^0[5-7]\d{8}$/;
 const MESSAGE_TELEPHONE = "Le téléphone doit contenir 10 chiffres et commencer par 05, 06 ou 07.";
@@ -265,7 +266,6 @@ function DetailClient({ client, token, moi, onRetour, onModifie, onVoirReclamati
               <th>Numéro</th>
               <th>Statut</th>
               <th>Motif</th>
-              <th>Priorité</th>
               <th>Reçue le</th>
             </tr>
           </thead>
@@ -273,9 +273,8 @@ function DetailClient({ client, token, moi, onRetour, onModifie, onVoirReclamati
             {reclamations.map((r) => (
               <tr key={r.id} className="ligne-cliquable" onClick={() => onVoirReclamation(r.id)}>
                 <td>{r.numero_reclamation}</td>
-                <td>{r.statut}</td>
+                <td><StatutPill statut={r.statut} /></td>
                 <td>{r.motif}</td>
-                <td>{r.priorite}</td>
                 <td>{r.date_reception.slice(0, 10)}</td>
               </tr>
             ))}

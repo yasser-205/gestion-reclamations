@@ -24,17 +24,18 @@ export async function apiRequest(path, { method = "GET", body, token } = {}) {
   return { ok: reponse.ok, status: reponse.status, data };
 }
 
-export async function apiUpload(path, { fichiers = [], token } = {}) {
+export async function apiUpload(path, { champs = {}, fichiers = [], token, method = "POST" } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const formData = new FormData();
+  Object.entries(champs).forEach(([cle, valeur]) => formData.append(cle, valeur));
   fichiers.forEach((fichier) => formData.append("fichiers", fichier));
 
   let reponse;
   try {
     reponse = await fetch(`${API_URL}${path}`, {
-      method: "POST",
+      method,
       headers,
       body: formData,
     });

@@ -73,86 +73,96 @@ function Login({ onConnecte }) {
   }
 
   return (
-    <div className="page page-login">
-      <h1>Gestion des réclamations</h1>
-
-      <div className="segmented">
-        <button
-          type="button"
-          className={mode === "connexion" ? "actif" : ""}
-          onClick={() => { setMode("connexion"); setErreur(""); }}
-        >
-          Se connecter
-        </button>
-        <button
-          type="button"
-          className={mode === "inscription" ? "actif" : ""}
-          onClick={() => { setMode("inscription"); setErreur(""); }}
-        >
-          S'inscrire
-        </button>
+    <div className="ecran-login">
+      <div className="login-hero">
+        <img src="/logo-cat-sombre.png" alt="CAT Assurance & Réassurance" className="login-logo" />
+        <p className="login-claim">Le suivi de vos réclamations, du premier contact à la clôture.</p>
+        <p className="login-legal">Entreprise régie par la loi n° 17-99 portant code des assurances.</p>
       </div>
 
-      {mode === "connexion" ? (
-        <form className="formulaire" onSubmit={seConnecter}>
-          <label>
-            Login
-            <input value={login} onChange={(e) => setLogin(e.target.value)} />
-          </label>
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              value={motDePasse}
-              onChange={(e) => setMotDePasse(e.target.value)}
-            />
-          </label>
-          <button type="submit" disabled={chargement}>Se connecter</button>
-        </form>
-      ) : (
-        <form className="formulaire" onSubmit={sInscrire}>
-          <h2>Créer un compte client</h2>
-          <label>
-            Login
-            <input value={login} onChange={(e) => setLogin(e.target.value)} />
-          </label>
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              value={motDePasse}
-              onChange={(e) => setMotDePasse(e.target.value)}
-              pattern={REGEX_MOT_DE_PASSE.source}
-              title="Au moins 8 caractères dont une majuscule"
-            />
-          </label>
-          <label>
-            Nom
-            <input value={nom} onChange={(e) => setNom(e.target.value)} />
-          </label>
-          <label>
-            Prénom
-            <input value={prenom} onChange={(e) => setPrenom(e.target.value)} />
-          </label>
-          <label>
-            Email
-            <input value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
-          <label>
-            Téléphone
-            <input
-              placeholder="0612345678"
-              value={telephone}
-              onChange={(e) => setTelephone(e.target.value)}
-              pattern={REGEX_TELEPHONE.source}
-              title="10 chiffres, commence par 05, 06 ou 07"
-            />
-          </label>
-          <button type="submit" disabled={chargement}>S'inscrire</button>
-        </form>
-      )}
+      <div className="login-formulaire-zone">
+        <div className="page page-login">
+          <h1>Portail réclamations</h1>
 
-      {erreur && <p className="erreur">{erreur}</p>}
+          <div className="segmented">
+            <button
+              type="button"
+              className={mode === "connexion" ? "actif" : ""}
+              onClick={() => { setMode("connexion"); setErreur(""); }}
+            >
+              Se connecter
+            </button>
+            <button
+              type="button"
+              className={mode === "inscription" ? "actif" : ""}
+              onClick={() => { setMode("inscription"); setErreur(""); }}
+            >
+              S'inscrire
+            </button>
+          </div>
+
+          {mode === "connexion" ? (
+            <form className="formulaire" onSubmit={seConnecter}>
+              <label>
+                Login
+                <input value={login} onChange={(e) => setLogin(e.target.value)} />
+              </label>
+              <label>
+                Mot de passe
+                <input
+                  type="password"
+                  value={motDePasse}
+                  onChange={(e) => setMotDePasse(e.target.value)}
+                />
+              </label>
+              <button type="submit" disabled={chargement}>Se connecter</button>
+            </form>
+          ) : (
+            <form className="formulaire" onSubmit={sInscrire}>
+              <h2>Créer un compte client</h2>
+              <label>
+                Login
+                <input value={login} onChange={(e) => setLogin(e.target.value)} />
+              </label>
+              <label>
+                Mot de passe
+                <input
+                  type="password"
+                  value={motDePasse}
+                  onChange={(e) => setMotDePasse(e.target.value)}
+                  pattern={REGEX_MOT_DE_PASSE.source}
+                  title="Au moins 8 caractères dont une majuscule"
+                />
+              </label>
+              <label>
+                Nom
+                <input value={nom} onChange={(e) => setNom(e.target.value)} />
+              </label>
+              <label>
+                Prénom
+                <input value={prenom} onChange={(e) => setPrenom(e.target.value)} />
+              </label>
+              <label>
+                Email
+                <input value={email} onChange={(e) => setEmail(e.target.value)} />
+              </label>
+              <label>
+                Téléphone
+                <input
+                  placeholder="0612345678"
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  pattern={REGEX_TELEPHONE.source}
+                  title="10 chiffres, commence par 05, 06 ou 07"
+                />
+              </label>
+              <button type="submit" disabled={chargement}>S'inscrire</button>
+            </form>
+          )}
+
+          {erreur && <p className="erreur">{erreur}</p>}
+        </div>
+      </div>
     </div>
   );
 }

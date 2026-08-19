@@ -100,11 +100,16 @@ Autres scripts npm : `npm run build` (production), `npm run lint`, `npm run prev
 
 - Authentification par token JWT, inscription client en libre-service
 - Réclamations : création (avec pièces jointes optionnelles), filtres
-  (statut/motif/dates/recherche), tri par échéance, pagination, export CSV,
-  modification, prise en charge par un gestionnaire (`nouvelle` → `affectée`),
-  clôture, affectation manuelle à un gestionnaire (responsable/admin), réponse au
-  client (réservée au gestionnaire en charge ou à un responsable/admin, tant que la
-  réclamation n'est pas clôturée), alertes d'échéance à venir/dépassée
+  (statut/motif/dates/recherche), pagination, export CSV,
+  modification, affectation manuelle à un gestionnaire (responsable/admin), fil de
+  réponses façon chat entre le client et le staff (réservé au gestionnaire en
+  charge ou à un responsable/admin côté staff, et au client une fois que le staff a
+  répondu au moins une fois), tant que la réclamation n'est pas clôturée
+- Statuts d'une réclamation, avec transitions automatiques : `nouvelle` (créée,
+  pas encore affectée) → `affectee` (prise en charge par un gestionnaire) →
+  `en_attente_client` (le staff vient de répondre, en attente du client) ↔
+  `en_cours` (le client vient de répondre, le staff doit répondre ou clôturer) →
+  `cloturee` (fermée par le gestionnaire)
 - Pièces jointes : ajout de fichiers à la création d'une réclamation, stockage dans
   MongoDB (GridFS), consultation/téléchargement depuis le détail de la réclamation
 - Clients : liste, fiche modifiable, historique de leurs réclamations

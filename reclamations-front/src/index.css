@@ -1,23 +1,23 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
+  --text: #55666d;
+  --text-h: #2a2d30;
   --bg: #fff;
-  --bg-soft: #f7f6f9;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --danger: #d1293d;
-  --danger-bg: rgba(209, 41, 61, 0.1);
-  --succes: #1a7f37;
-  --succes-bg: rgba(26, 127, 55, 0.1);
-  --avertissement: #a86a00;
-  --avertissement-bg: rgba(250, 178, 25, 0.18);
-  --ombre: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --bg-soft: #eaf2f3;
+  --border: #d7e3e5;
+  --code-bg: #eaf2f3;
+  --accent: #1d7e97;
+  --accent-bg: rgba(29, 126, 151, 0.12);
+  --accent-border: rgba(29, 126, 151, 0.4);
+  --danger: #b23a2e;
+  --danger-bg: rgba(178, 58, 46, 0.1);
+  --succes: #217a52;
+  --succes-bg: rgba(33, 122, 82, 0.1);
+  --avertissement: #a6690e;
+  --avertissement-bg: rgba(166, 105, 14, 0.14);
+  --ombre: 0 1px 2px rgba(11, 70, 80, 0.05), 0 8px 24px rgba(11, 70, 80, 0.08);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Segoe UI', -apple-system, 'Helvetica Neue', Roboto, sans-serif;
+  --heading: 'Poppins', 'Century Gothic', 'Segoe UI', sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 16px/145% var(--sans);
@@ -33,21 +33,21 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --text: #9ca3af;
-  --text-h: #f3f4f6;
-  --bg: #16171d;
-  --bg-soft: #1c1d24;
-  --border: #2e303a;
-  --code-bg: #1f2028;
-  --accent: #c084fc;
-  --accent-bg: rgba(192, 132, 252, 0.15);
-  --accent-border: rgba(192, 132, 252, 0.5);
-  --danger: #f28b93;
-  --danger-bg: rgba(242, 139, 147, 0.12);
-  --succes: #7ee2a8;
-  --succes-bg: rgba(126, 226, 168, 0.12);
-  --avertissement: #fab219;
-  --avertissement-bg: rgba(250, 178, 25, 0.18);
+  --text: #9fb4bc;
+  --text-h: #eaf2f3;
+  --bg: #0d1a20;
+  --bg-soft: #16262e;
+  --border: #253f49;
+  --code-bg: #16262e;
+  --accent: #39bee0;
+  --accent-bg: rgba(57, 190, 224, 0.15);
+  --accent-border: rgba(57, 190, 224, 0.45);
+  --danger: #e2685d;
+  --danger-bg: rgba(226, 104, 93, 0.14);
+  --succes: #4cc490;
+  --succes-bg: rgba(76, 196, 144, 0.14);
+  --avertissement: #e0a83e;
+  --avertissement-bg: rgba(224, 168, 62, 0.16);
   --ombre: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
@@ -71,7 +71,7 @@ body {
 
 h1, h2, h3 {
   font-family: var(--heading);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-h);
 }
 

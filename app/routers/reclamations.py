@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from bson.errors import InvalidId
 from gridfs.errors import NoFile
@@ -9,7 +9,7 @@ from app.models.reclamation import (
     ReclamationPublic,
     Canal,
     Motif,
-    Priorite,
+    Statut,
     REGEX_NUMERO_SINISTRE,
     REGEX_ATTESTATION,
     REGEX_MATRICULATION,
@@ -73,7 +73,6 @@ class ModificationReclamation(BaseModel):
     contrat: Optional[str] = None
     canal: Optional[Canal] = None
     motif: Optional[Motif] = None
-    priorite: Optional[Priorite] = None
     description: Optional[str] = None
     attestation: Optional[str] = None
     matriculation: Optional[str] = None
@@ -130,7 +129,7 @@ def supprimer(id: str, utilisateur: dict = Depends(get_utilisateur_courant)):
 
 
 class ChangementStaut(BaseModel):
-    statut: str
+    statut: Statut
 
 @router.patch("/{id}/statut",response_model=ReclamationPublic)
 def changer_statut(
@@ -139,7 +138,7 @@ def changer_statut(
     utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin")),
 ):
     auteur = f"{utilisateur['prenom']}{utilisateur['nom']}"
-    reclamation = reclamation_repo.changer_statut(id, donnees.statut, auteur)
+    reclamation = reclamation_repo.changer_statut(id, donnees.statut.value, auteur)
     if reclamation is None:
         raise HTTPException(status_code=404, detail="réclamation introuvable")
     return reclamation  
@@ -183,28 +182,50 @@ def affecter(
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
     return reclamation
 
-class Reponse(BaseModel):
-    reponse: str
-
-@router.patch("/{id}/reponse", response_model=ReclamationPublic)
-def repondre(
+@router.post("/{id}/reponse", response_model=ReclamationPublic)
+async def repondre(
     id: str,
-    donnees: Reponse,
-    utilisateur: dict = Depends(exiger_role("gestionnaire","responsable","admin"))
+    reponse: str = Form(...),
+    fichiers: list[UploadFile] = File(default=[]),
+    utilisateur: dict = Depends(get_utilisateur_courant),
 ):
     reclamation_existante = reclamation_repo.get_par_id(id)
     if reclamation_existante is None:
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
     if reclamation_existante.get("statut") == "cloturee":
         raise HTTPException(status_code=400, detail="Impossible de répondre à une réclamation clôturée")
-    if utilisateur["role"] == "gestionnaire" and reclamation_existante.get("gestionnaire_id") != utilisateur["id"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Seul le gestionnaire en charge de cette réclamation peut y répondre",
-        )
+
+    role = utilisateur["role"]
+    if role == "client":
+        if reclamation_existante["client_id"] != utilisateur.get("client_id"):
+            raise HTTPException(status_code=404, detail="Réclamation introuvable")
+        reponses_existantes = reclamation_existante.get("reponses", [])
+        if not any(r.get("role") != "client" for r in reponses_existantes):
+            raise HTTPException(
+                status_code=403,
+                detail="En attente d'une réponse du gestionnaire avant de pouvoir répondre",
+            )
+    elif role == "gestionnaire":
+        if reclamation_existante.get("gestionnaire_id") != utilisateur["id"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Seul le gestionnaire en charge de cette réclamation peut y répondre",
+            )
+    elif role not in ("responsable", "admin"):
+        raise HTTPException(status_code=403, detail="Acces refusé : role insuffisant")
+
+    pieces_jointes = []
+    for fichier in fichiers:
+        contenu = await fichier.read()
+        file_id = fichier_repo.enregistrer(contenu, fichier.filename, fichier.content_type)
+        pieces_jointes.append({
+            "file_id": file_id,
+            "nom": fichier.filename,
+            "type": fichier.content_type,
+        })
 
     auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
-    reclamation = reclamation_repo.repondre(id, donnees.reponse, auteur)
+    reclamation = reclamation_repo.ajouter_reponse(id, reponse, auteur, role, pieces_jointes)
     if reclamation is None:
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
     return reclamation

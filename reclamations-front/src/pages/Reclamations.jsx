@@ -1,19 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { apiRequest, apiOuvrirFichier, messageErreur } from "../api";
+import { apiRequest, apiUpload, apiOuvrirFichier, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
+import StatutPill from "../components/StatutPill";
+
+const DELAI_CONFIRMATION_MS = 3000;
+
+function useConfirmation(delaiMs = DELAI_CONFIRMATION_MS) {
+  const [enAttente, setEnAttente] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  function declencher(action) {
+    if (!enAttente) {
+      setEnAttente(true);
+      timerRef.current = setTimeout(() => setEnAttente(false), delaiMs);
+      return;
+    }
+    clearTimeout(timerRef.current);
+    setEnAttente(false);
+    action();
+  }
+
+  return { enAttente, declencher };
+}
 
 const STATUTS = [
   "nouvelle",
   "affectee",
   "en_cours",
   "en_attente_client",
-  "resolue",
   "cloturee",
-  "rejetee",
 ];
 
-const STATUTS_CLOTURES = ["resolue", "cloturee", "rejetee"];
 const MOTIFS = ["remboursement", "delai", "prime", "contrat", "service", "autre"];
 const TAILLE_PAGE = 10;
 const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
@@ -22,25 +42,6 @@ const REGEX_ATTESTATION = /^(CF|C) \d{4} \/ \d{6}$/;
 const EXEMPLE_ATTESTATION = "CF 1234 / 123456 ou C 1234 / 123456";
 const REGEX_MATRICULATION = /^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$/;
 const EXEMPLE_MATRICULATION = "12345-A-6, 12345-WW-1 ou 12345-RT-1";
-
-function etatEcheance(r) {
-  if (!r.date_echeance || STATUTS_CLOTURES.includes(r.statut)) return null;
-  const joursRestants = (new Date(r.date_echeance) - new Date()) / 86_400_000;
-  if (joursRestants < 0) return "depassee";
-  if (joursRestants <= 3) return "proche";
-  return null;
-}
-
-function BadgeEcheance({ reclamation }) {
-  const etat = etatEcheance(reclamation);
-  const date = reclamation.date_echeance ? reclamation.date_echeance.slice(0, 10) : "—";
-  if (!etat) return <span>{date}</span>;
-  return (
-    <span className={`badge-echeance badge-${etat}`}>
-      {date} · {etat === "depassee" ? "En retard" : "Bientôt"}
-    </span>
-  );
-}
 
 function Reclamations({ token, moi, cibleReclamation }) {
   const role = moi?.role;
@@ -55,12 +56,16 @@ function Reclamations({ token, moi, cibleReclamation }) {
   const [modifierOuvert, setModifierOuvert] = useState(false);
   const [gestionnaireChoisi, setGestionnaireChoisi] = useState("");
   const [reponseTexte, setReponseTexte] = useState("");
+  const [reponseFichiers, setReponseFichiers] = useState([]);
+  const [cleChampFichiersReponse, setCleChampFichiersReponse] = useState(0);
   const [enCoursPriseEnCharge, setEnCoursPriseEnCharge] = useState(false);
   const [enCoursCloture, setEnCoursCloture] = useState(false);
   const [enCoursAffectation, setEnCoursAffectation] = useState(false);
   const [enCoursSuppression, setEnCoursSuppression] = useState(false);
   const [enCoursReponse, setEnCoursReponse] = useState(false);
   const [recharge, setRecharge] = useState(0);
+  const confirmationReponse = useConfirmation();
+  const confirmationCloture = useConfirmation();
 
   const [recherche, setRecherche] = useState("");
   const [filtreStatut, setFiltreStatut] = useState("");
@@ -69,7 +74,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
   const [dateFin, setDateFin] = useState("");
   const [pageActuelle, setPageActuelle] = useState(1);
   const [cleCibleTraitee, setCleCibleTraitee] = useState(null);
-  const [triEcheance, setTriEcheance] = useState(null);
   const [clientDetail, setClientDetail] = useState(null);
 
   useEffect(() => {
@@ -95,7 +99,8 @@ function Reclamations({ token, moi, cibleReclamation }) {
     if (cible) {
       setSelectionId(cible.id);
       setGestionnaireChoisi("");
-      setReponseTexte(cible.reponse || "");
+      setReponseTexte("");
+      setReponseFichiers([]);
       setModifierOuvert(false);
     }
     setCleCibleTraitee(cibleReclamation.cle);
@@ -137,19 +142,9 @@ function Reclamations({ token, moi, cibleReclamation }) {
     return true;
   }) || [];
 
-  const reclamationsTriees = triEcheance
-    ? [...reclamationsFiltrees].sort((a, b) => {
-        if (!a.date_echeance && !b.date_echeance) return 0;
-        if (!a.date_echeance) return 1;
-        if (!b.date_echeance) return -1;
-        const diff = new Date(a.date_echeance) - new Date(b.date_echeance);
-        return triEcheance === "recent" ? -diff : diff;
-      })
-    : reclamationsFiltrees;
-
-  const totalPages = Math.max(1, Math.ceil(reclamationsTriees.length / TAILLE_PAGE));
+  const totalPages = Math.max(1, Math.ceil(reclamationsFiltrees.length / TAILLE_PAGE));
   const pageBornee = Math.min(pageActuelle, totalPages);
-  const reclamationsPage = reclamationsTriees.slice(
+  const reclamationsPage = reclamationsFiltrees.slice(
     (pageBornee - 1) * TAILLE_PAGE,
     pageBornee * TAILLE_PAGE
   );
@@ -159,10 +154,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
       setter(valeur);
       setPageActuelle(1);
     };
-  }
-
-  function basculerTriEcheance() {
-    setTriEcheance((t) => (t === "recent" ? "ancien" : "recent"));
   }
 
   function reinitialiserFiltres() {
@@ -177,7 +168,8 @@ function Reclamations({ token, moi, cibleReclamation }) {
   function ouvrirDetail(r) {
     setSelectionId(r.id);
     setGestionnaireChoisi("");
-    setReponseTexte(r.reponse || "");
+    setReponseTexte("");
+    setReponseFichiers([]);
     setModifierOuvert(false);
   }
 
@@ -239,15 +231,17 @@ function Reclamations({ token, moi, cibleReclamation }) {
 
   async function envoyerReponse() {
     setEnCoursReponse(true);
-    const rep = await apiRequest(`/reclamation/${rec.id}/reponse`, {
-      method: "PATCH",
+    const rep = await apiUpload(`/reclamation/${rec.id}/reponse`, {
+      champs: { reponse: reponseTexte },
+      fichiers: reponseFichiers,
       token,
-      body: { reponse: reponseTexte },
     });
     setEnCoursReponse(false);
     if (rep.ok) {
       toast.success("Réponse envoyée.");
       setReponseTexte("");
+      setReponseFichiers([]);
+      setCleChampFichiersReponse((n) => n + 1);
       setRecharge((n) => n + 1);
     } else {
       toast.error(messageErreur(rep.status));
@@ -282,11 +276,16 @@ function Reclamations({ token, moi, cibleReclamation }) {
   if (rec) {
     const peutPrendreEnCharge = role === "gestionnaire" && rec.statut === "nouvelle";
     const peutCloturer = role === "gestionnaire" && rec.statut !== "nouvelle" && rec.statut !== "cloturee";
+    const staffARepondu = (rec.reponses || []).some((m) => m.role !== "client");
     const peutRepondre =
       rec.statut !== "cloturee" &&
       (role === "responsable" || role === "admin"
         ? true
-        : role === "gestionnaire" && rec.gestionnaire_id === moi?.id);
+        : role === "gestionnaire"
+        ? rec.gestionnaire_id === moi?.id
+        : role === "client"
+        ? staffARepondu
+        : false);
 
     return (
       <div className="page">
@@ -323,9 +322,8 @@ function Reclamations({ token, moi, cibleReclamation }) {
             <div className="colonnes">
               <div>
                 <p><strong>Numéro :</strong> {rec.numero_reclamation}</p>
-                <p><strong>Statut :</strong> {rec.statut}</p>
+                <p><strong>Statut :</strong> <StatutPill statut={rec.statut} /></p>
                 <p><strong>Type :</strong> {rec.type_reclamation}</p>
-                <p><strong>Priorité :</strong> {rec.priorite}</p>
                 <p><strong>Motif :</strong> {rec.motif}</p>
                 {rec.type_reclamation === "production" && (
                   <>
@@ -341,20 +339,12 @@ function Reclamations({ token, moi, cibleReclamation }) {
                 <p><strong>Canal :</strong> {rec.canal}</p>
                 <p><strong>Contrat :</strong> {rec.contrat || "—"}</p>
                 <p><strong>Reçue le :</strong> {rec.date_reception.slice(0, 10)}</p>
-                <p><strong>Échéance :</strong> <BadgeEcheance reclamation={rec} /></p>
                 <p><strong>Gestionnaire :</strong> {nomsGestionnaires[rec.gestionnaire_id] || "non affecté"}</p>
                 <p><strong>Téléphone du client :</strong> {clientDetail?.id === rec.client_id ? clientDetail.telephone : "…"}</p>
               </div>
             </div>
 
             <p><strong>Description :</strong> {rec.description}</p>
-
-            {rec.reponse && (
-              <>
-                <h3>Réponse</h3>
-                <p className="reponse-existante">{rec.reponse}</p>
-              </>
-            )}
 
             {rec.pieces_jointes && rec.pieces_jointes.length > 0 && (
               <>
@@ -379,12 +369,14 @@ function Reclamations({ token, moi, cibleReclamation }) {
 
         <h3>Historique</h3>
         <ul className="historique">
-          {rec.historique.map((h, i) => (
-            <li key={i}>{h.date.slice(0, 19).replace("T", " ")} — {h.auteur} — {h.action}</li>
-          ))}
+          {rec.historique
+            .filter((h) => h.action !== "Réponse apportée")
+            .map((h, i) => (
+              <li key={i}>{h.date.slice(0, 19).replace("T", " ")} — {h.auteur} — {h.action}</li>
+            ))}
         </ul>
 
-        {(peutPrendreEnCharge || peutCloturer || peutAffecter) && (
+        {(peutPrendreEnCharge || peutAffecter) && (
           <>
             <hr />
             <h3>Action</h3>
@@ -395,15 +387,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
                   <button type="button" onClick={prendreEnCharge} disabled={enCoursPriseEnCharge}>
                     {enCoursPriseEnCharge && <Spinner taille={14} />}
                     Prise en charge
-                  </button>
-                </div>
-              )}
-              {peutCloturer && (
-                <div>
-                  <p>Clôturer la réclamation</p>
-                  <button type="button" onClick={cloturer} disabled={enCoursCloture}>
-                    {enCoursCloture && <Spinner taille={14} />}
-                    Clôturer
                   </button>
                 </div>
               )}
@@ -432,25 +415,89 @@ function Reclamations({ token, moi, cibleReclamation }) {
           </>
         )}
 
-        {peutRepondre && (
+        {rec.reponses && rec.reponses.length > 0 && (
           <>
             <hr />
-            <h3>Répondre au client</h3>
+            <h3>Échanges</h3>
+            <ul className="fil-reponses">
+              {rec.reponses.map((m, i) => (
+                <li
+                  key={i}
+                  className={`message-reponse ${m.role === "client" ? "message-client" : "message-staff"}`}
+                >
+                  <div className="message-entete">
+                    <strong>{m.auteur}</strong>
+                    <span className="message-date">{m.date.slice(0, 19).replace("T", " ")}</span>
+                  </div>
+                  <p className="message-texte">{m.texte}</p>
+                  {m.pieces_jointes && m.pieces_jointes.length > 0 && (
+                    <div className="attachments-message">
+                      {m.pieces_jointes.map((piece, j) => (
+                        <button
+                          key={j}
+                          type="button"
+                          className="lien-piece-jointe"
+                          onClick={() => ouvrirPieceJointe(piece.file_id)}
+                        >
+                          {piece.nom}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {(peutRepondre || peutCloturer) && (
+          <>
+            <hr />
+            <h3>{estClient ? "Votre réponse" : "Répondre au client"}</h3>
             <div className="zone-reponse">
-              <textarea
-                rows={4}
-                placeholder="Rédiger une réponse…"
-                value={reponseTexte}
-                onChange={(e) => setReponseTexte(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={envoyerReponse}
-                disabled={enCoursReponse || !reponseTexte.trim()}
-              >
-                {enCoursReponse && <Spinner taille={14} />}
-                Répondre
-              </button>
+              {peutRepondre && (
+                <>
+                  <textarea
+                    rows={4}
+                    placeholder="Rédiger une réponse…"
+                    value={reponseTexte}
+                    onChange={(e) => setReponseTexte(e.target.value)}
+                  />
+                  <label className="champ-fichier-reponse">
+                    Pièce jointe (optionnel)
+                    <input
+                      key={cleChampFichiersReponse}
+                      type="file"
+                      multiple
+                      onChange={(e) => setReponseFichiers(Array.from(e.target.files))}
+                    />
+                  </label>
+                </>
+              )}
+              <div className="boutons-ligne">
+                {peutRepondre && (
+                  <button
+                    type="button"
+                    className={confirmationReponse.enAttente ? "btn-confirmation" : ""}
+                    onClick={() => confirmationReponse.declencher(envoyerReponse)}
+                    disabled={enCoursReponse || !reponseTexte.trim()}
+                  >
+                    {enCoursReponse && <Spinner taille={14} />}
+                    {confirmationReponse.enAttente ? "Êtes-vous sûr ?" : "Répondre"}
+                  </button>
+                )}
+                {peutCloturer && (
+                  <button
+                    type="button"
+                    className={confirmationCloture.enAttente ? "btn-confirmation" : ""}
+                    onClick={() => confirmationCloture.declencher(cloturer)}
+                    disabled={enCoursCloture}
+                  >
+                    {enCoursCloture && <Spinner taille={14} />}
+                    {confirmationCloture.enAttente ? "Êtes-vous sûr ?" : "Clôturer"}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -501,7 +548,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
             <button
               type="button"
               className="btn-secondaire"
-              onClick={() => exporterCSV(reclamationsTriees)}
+              onClick={() => exporterCSV(reclamationsFiltrees)}
             >
               Exporter en CSV
             </button>
@@ -516,33 +563,29 @@ function Reclamations({ token, moi, cibleReclamation }) {
                   <tr>
                     <th>Numéro</th>
                     <th>Statut</th>
-                    <th>Priorité</th>
                     <th>Motif</th>
                     <th>Reçue le</th>
-                    <th
-                      className="colonne-triable"
-                      onClick={basculerTriEcheance}
-                      title="Trier par échéance"
-                    >
-                      Échéance {triEcheance === "recent" ? "↓" : triEcheance === "ancien" ? "↑" : ""}
-                    </th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reclamationsPage.map((r) => {
-                    const etat = etatEcheance(r);
-                    const classeLigne = etat ? `ligne-cliquable ligne-echeance-${etat}` : "ligne-cliquable";
-                    return (
-                      <tr key={r.id} className={classeLigne} onClick={() => ouvrirDetail(r)}>
-                        <td>{r.numero_reclamation}</td>
-                        <td>{r.statut}</td>
-                        <td>{r.priorite}</td>
-                        <td>{r.motif}</td>
-                        <td>{r.date_reception.slice(0, 10)}</td>
-                        <td><BadgeEcheance reclamation={r} /></td>
-                      </tr>
-                    );
-                  })}
+                  {reclamationsPage.map((r) => (
+                    <tr key={r.id} className="ligne-cliquable" onClick={() => ouvrirDetail(r)}>
+                      <td>{r.numero_reclamation}</td>
+                      <td><StatutPill statut={r.statut} /></td>
+                      <td>{r.motif}</td>
+                      <td>{r.date_reception.slice(0, 10)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-secondaire btn-petit"
+                          onClick={(e) => { e.stopPropagation(); ouvrirDetail(r); }}
+                        >
+                          Répondre
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
 
@@ -584,7 +627,6 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
   const [contrat, setContrat] = useState(rec.contrat || "");
   const [canal, setCanal] = useState(rec.canal);
   const [motif, setMotif] = useState(rec.motif);
-  const [priorite, setPriorite] = useState(rec.priorite);
   const [description, setDescription] = useState(rec.description);
   const [attestation, setAttestation] = useState(rec.attestation || "");
   const [matriculation, setMatriculation] = useState(rec.matriculation || "");
@@ -624,7 +666,6 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
         contrat: contrat || null,
         canal,
         motif,
-        priorite,
         description,
         attestation: attestation || null,
         matriculation: matriculation || null,
@@ -657,15 +698,6 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
             Motif
             <select value={motif} onChange={(e) => setMotif(e.target.value)}>
               {MOTIFS.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
-          <label>
-            Priorité
-            <select value={priorite} onChange={(e) => setPriorite(e.target.value)}>
-              <option value="basse">Basse</option>
-              <option value="moyenne">Moyenne</option>
-              <option value="haute">Haute</option>
-              <option value="urgente">Urgente</option>
             </select>
           </label>
         </div>
@@ -732,13 +764,12 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
 export default Reclamations;
 
 function exporterCSV(reclamations) {
-  const entetes = ["Numéro", "Statut", "Type", "Priorité", "Motif", "Date réception"];
+  const entetes = ["Numéro", "Statut", "Type", "Motif", "Date réception"];
 
   const lignes = reclamations.map((r) => [
     r.numero_reclamation,
     r.statut,
     r.type_reclamation,
-    r.priorite,
     r.motif,
     r.date_reception ? r.date_reception.slice(0, 10) : "",
   ]);
