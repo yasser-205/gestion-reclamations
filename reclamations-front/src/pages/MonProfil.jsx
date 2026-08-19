@@ -8,22 +8,28 @@ const MESSAGE_TELEPHONE = "Le téléphone doit contenir 10 chiffres et commencer
 const REGEX_MOT_DE_PASSE = /^(?=.*[A-Z]).{8,}$/;
 const MESSAGE_MOT_DE_PASSE = "Le mot de passe doit contenir au moins 8 caractères dont une majuscule.";
 
-function MonProfil({ token, onRetour }) {
+const LABELS_ROLE = {
+  agent: "Agent",
+  gestionnaire: "Gestionnaire",
+  responsable: "Responsable",
+  admin: "Admin",
+};
+
+function MonProfil({ token, moi, onRetour }) {
+  const estClient = moi?.role === "client";
   const [client, setClient] = useState(null);
   const [erreur, setErreur] = useState("");
 
   useEffect(() => {
+    if (!estClient || !moi?.client_id) return;
     let ignore = false;
-    apiRequest("/auth/me", { token }).then((repMoi) => {
-      if (ignore || !repMoi.ok || !repMoi.data.client_id) return;
-      apiRequest(`/clients/${repMoi.data.client_id}`, { token }).then((rep) => {
-        if (ignore) return;
-        if (rep.ok) setClient(rep.data);
-        else setErreur(messageErreur(rep.status));
-      });
+    apiRequest(`/clients/${moi.client_id}`, { token }).then((rep) => {
+      if (ignore) return;
+      if (rep.ok) setClient(rep.data);
+      else setErreur(messageErreur(rep.status));
     });
     return () => { ignore = true; };
-  }, [token]);
+  }, [estClient, moi?.client_id, token]);
 
   return (
     <div className="page page-formulaire">
@@ -33,11 +39,29 @@ function MonProfil({ token, onRetour }) {
       </div>
 
       {erreur && <p className="erreur">{erreur}</p>}
-      {!client && !erreur && <p className="chargement-page"><Spinner /> Chargement…</p>}
 
-      {client && (
+      {estClient ? (
         <>
-          <FormulaireInfos client={client} token={token} onEnregistre={setClient} />
+          {!client && !erreur && <p className="chargement-page"><Spinner /> Chargement…</p>}
+          {client && (
+            <>
+              <FormulaireInfos client={client} token={token} onEnregistre={setClient} />
+              <FormulaireMotDePasse token={token} />
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="carte formulaire-pro">
+            <div className="groupe-champs">
+              <h3>Identité</h3>
+              <div className="champs-grille">
+                <p><strong>Nom :</strong> {moi?.nom}</p>
+                <p><strong>Prénom :</strong> {moi?.prenom}</p>
+                <p><strong>Rôle :</strong> {LABELS_ROLE[moi?.role] || moi?.role}</p>
+              </div>
+            </div>
+          </div>
           <FormulaireMotDePasse token={token} />
         </>
       )}

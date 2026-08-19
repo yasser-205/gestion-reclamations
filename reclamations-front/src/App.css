@@ -33,11 +33,36 @@
   right: 16px;
 }
 
-.bouton-profil-flottant {
+.barre-profil-flottante {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.salutation-profil {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.bouton-avatar-profil {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
 }
 .sidebar .nav {
   display: flex;

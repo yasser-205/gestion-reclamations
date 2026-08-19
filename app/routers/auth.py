@@ -74,7 +74,13 @@ def register(donnees: inscription_requete):
 
 @router.get("/me")
 def me(utilisateur: dict = Depends(get_utilisateur_courant)):
-    return {"id": utilisateur["id"], "role": utilisateur["role"], "client_id": utilisateur.get("client_id")}
+    return {
+        "id": utilisateur["id"],
+        "role": utilisateur["role"],
+        "client_id": utilisateur.get("client_id"),
+        "nom": utilisateur["nom"],
+        "prenom": utilisateur["prenom"],
+    }
 
 class ChangementMotDePasse(BaseModel):
     mot_de_passe_actuel: str

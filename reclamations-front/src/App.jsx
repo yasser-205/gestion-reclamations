@@ -67,14 +67,19 @@ function App() {
   return (
     <div className="app-shell">
       <ToasterTheme />
-      {moi?.role === "client" && (
-        <button
-          type="button"
-          className="btn-secondaire bouton-profil-flottant"
-          onClick={() => setPage("Mon profil")}
-        >
-          Mon profil
-        </button>
+      {moi && (
+        <div className="barre-profil-flottante">
+          <span className="salutation-profil">Bonjour {moi.prenom}</span>
+          <button
+            type="button"
+            className="bouton-avatar-profil"
+            onClick={() => setPage("Mon profil")}
+            title="Mon profil"
+            aria-label="Mon profil"
+          >
+            {moi.prenom ? moi.prenom[0].toUpperCase() : "?"}
+          </button>
+        </div>
       )}
       <Sidebar
         pages={pages}
@@ -94,8 +99,8 @@ function App() {
         {page === "Clients" && <Clients token={token} moi={moi} onVoirReclamation={voirReclamation} />}
         {page === "Tableau de bord" && <Dashboard token={token} />}
         {page === "Employés" && <Employes token={token} />}
-        {page === "Mon profil" && moi?.role === "client" && (
-          <MonProfil token={token} onRetour={() => setPage("Réclamations")} />
+        {page === "Mon profil" && (
+          <MonProfil token={token} moi={moi} onRetour={() => setPage("Réclamations")} />
         )}
       </main>
     </div>
