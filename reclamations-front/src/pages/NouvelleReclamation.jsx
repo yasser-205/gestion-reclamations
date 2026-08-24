@@ -14,8 +14,8 @@ const TYPES_ATTESTATION = [
   { valeur: "tpv", label: "TPV (C)", exemple: "C 1234 / 123456", regex: /^C \d{4} \/ \d{6}$/ },
 ];
 
-const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
-const EXEMPLE_NUMERO_SINISTRE = "SIN-2026-000123";
+const REGEX_NUMERO_SINISTRE = /^\d{10}$/;
+const EXEMPLE_NUMERO_SINISTRE = "1234567890";
 
 function prefixeAttestation(typeAttestation) {
   return typeAttestation === "frontiere" ? "CF" : "C";
@@ -58,13 +58,7 @@ function assainirMatriculation(typeMatriculation, saisie) {
 }
 
 function assainirNumeroSinistre(saisie) {
-  const prefixe = "SIN-";
-  let brut = saisie.toUpperCase();
-  if (brut.startsWith(prefixe)) brut = brut.slice(prefixe.length);
-  const chiffres = brut.replace(/[^0-9]/g, "").slice(0, 10);
-  let resultat = `${prefixe}${chiffres.slice(0, 4)}`;
-  if (chiffres.length > 4) resultat += `-${chiffres.slice(4, 10)}`;
-  return resultat;
+  return saisie.replace(/[^0-9]/g, "").slice(0, 10);
 }
 
 function NouvelleReclamation({ token, moi }) {
@@ -76,7 +70,7 @@ function NouvelleReclamation({ token, moi }) {
   const [attestation, setAttestation] = useState(`${prefixeAttestation(TYPES_ATTESTATION[0].valeur)} `);
   const [typeMatriculation, setTypeMatriculation] = useState(TYPES_MATRICULATION[0].valeur);
   const [matriculation, setMatriculation] = useState("");
-  const [numeroSinistre, setNumeroSinistre] = useState("SIN-");
+  const [numeroSinistre, setNumeroSinistre] = useState("");
 
   const infoAttestation = TYPES_ATTESTATION.find((t) => t.valeur === typeAttestation);
   const infoMatriculation = TYPES_MATRICULATION.find((t) => t.valeur === typeMatriculation);
@@ -99,7 +93,6 @@ function NouvelleReclamation({ token, moi }) {
   const [chargementClients, setChargementClients] = useState(true);
 
   const [contrat, setContrat] = useState("");
-  const [canal, setCanal] = useState("telephone");
   const [motif, setMotif] = useState("remboursement");
   const [description, setDescription] = useState("");
   const [fichiers, setFichiers] = useState([]);
@@ -144,7 +137,7 @@ function NouvelleReclamation({ token, moi }) {
     }
     if (typeReclamation === "sinistre") {
       if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
-        setErreur(`Le numéro de sinistre doit respecter le format ${EXEMPLE_NUMERO_SINISTRE}.`);
+        setErreur("Le numéro de sinistre doit contenir exactement 10 chiffres.");
         return;
       }
     }
@@ -162,7 +155,6 @@ function NouvelleReclamation({ token, moi }) {
       attestation: attestationRenseignee ? attestation : null,
       matriculation: matriculation || null,
       numero_sinistre: typeReclamation === "sinistre" ? numeroSinistre : null,
-      canal,
       motif,
       description,
     };
@@ -192,14 +184,14 @@ function NouvelleReclamation({ token, moi }) {
     setContrat("");
     setAttestation(`${prefixeAttestation(typeAttestation)} `);
     setMatriculation("");
-    setNumeroSinistre("SIN-");
+    setNumeroSinistre("");
     setFichiers([]);
     setCleChampFichiers((n) => n + 1);
   }
 
   if (role && role !== "client" && !chargementClients && clients.length === 0 && !erreur) {
     return (
-      <div className="page page-formulaire">
+      <div className="page page-formulaire page-pleine-largeur">
         <div className="entete-page">
           <h1>Nouvelle réclamation</h1>
         </div>
@@ -211,7 +203,7 @@ function NouvelleReclamation({ token, moi }) {
   }
 
   return (
-    <div className="page page-formulaire">
+    <div className="page page-formulaire page-pleine-largeur">
       <div className="entete-page">
         <h1>Nouvelle réclamation</h1>
         <p className="sous-titre">Renseignez les informations ci-dessous pour enregistrer une réclamation.</p>
@@ -239,18 +231,19 @@ function NouvelleReclamation({ token, moi }) {
 
           {typeReclamation === "sinistre" && (
             <div className="champs-grille champs-grille-suite">
-              <label>
+              <label className="champ-pleine-largeur">
                 Numéro de sinistre <span className="requis">*</span>
                 <input
                   placeholder={EXEMPLE_NUMERO_SINISTRE}
                   value={numeroSinistre}
                   onChange={(e) => setNumeroSinistre(assainirNumeroSinistre(e.target.value))}
-                  pattern="^SIN-\d{4}-\d{6}$"
+                  pattern={REGEX_NUMERO_SINISTRE.source}
+                  inputMode="numeric"
                   required
                 />
               </label>
               <p className="legende champ-pleine-largeur">
-                Format : {EXEMPLE_NUMERO_SINISTRE}
+                Format : 10 chiffres (ex : {EXEMPLE_NUMERO_SINISTRE})
               </p>
             </div>
           )}
@@ -326,16 +319,6 @@ function NouvelleReclamation({ token, moi }) {
         <div className="groupe-champs">
           <h3>Détails</h3>
           <div className="champs-grille">
-            <label>
-              Canal
-              <select value={canal} onChange={(e) => setCanal(e.target.value)}>
-                <option value="telephone">Téléphone</option>
-                <option value="email">Email</option>
-                <option value="courrier">Courrier</option>
-                <option value="agence">Agence</option>
-              </select>
-            </label>
-
             <label>
               Motif
               <select value={motif} onChange={(e) => setMotif(e.target.value)}>

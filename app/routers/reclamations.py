@@ -7,7 +7,6 @@ import io
 from app.models.reclamation import (
     ReclamationCreation,
     ReclamationPublic,
-    Canal,
     Motif,
     Statut,
     REGEX_NUMERO_SINISTRE,
@@ -71,7 +70,6 @@ def consulter(id: str, utilisateur: dict = Depends(get_utilisateur_courant)):
 
 class ModificationReclamation(BaseModel):
     contrat: Optional[str] = None
-    canal: Optional[Canal] = None
     motif: Optional[Motif] = None
     description: Optional[str] = None
     attestation: Optional[str] = None
@@ -83,7 +81,7 @@ class ModificationReclamation(BaseModel):
     def verifier_format_numero_sinistre(cls, valeur):
         if valeur is not None and not REGEX_NUMERO_SINISTRE.match(valeur):
             raise ValueError(
-                "Le numéro de sinistre doit respecter le format SIN-AAAA-000000 (ex: SIN-2026-000123)."
+                "Le numéro de sinistre doit contenir exactement 10 chiffres."
             )
         return valeur
 

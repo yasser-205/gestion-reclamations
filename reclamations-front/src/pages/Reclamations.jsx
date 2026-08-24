@@ -36,8 +36,8 @@ const STATUTS = [
 
 const MOTIFS = ["remboursement", "delai", "prime", "contrat", "service", "autre"];
 const TAILLE_PAGE = 10;
-const REGEX_NUMERO_SINISTRE = /^SIN-\d{4}-\d{6}$/;
-const EXEMPLE_NUMERO_SINISTRE = "SIN-2026-000123";
+const REGEX_NUMERO_SINISTRE = /^\d{10}$/;
+const EXEMPLE_NUMERO_SINISTRE = "1234567890";
 const REGEX_ATTESTATION = /^(CF|C) \d{4} \/ \d{6}$/;
 const EXEMPLE_ATTESTATION = "CF 1234 / 123456 ou C 1234 / 123456";
 const REGEX_MATRICULATION = /^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$/;
@@ -266,7 +266,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
 
   if (!reclamations && !erreur) {
     return (
-      <div className="page">
+      <div className="page page-pleine-largeur">
         <h1>Réclamation</h1>
         <p className="chargement-page"><Spinner /> Chargement…</p>
       </div>
@@ -288,7 +288,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
         : false);
 
     return (
-      <div className="page">
+      <div className="page page-pleine-largeur">
         <div className="entete-detail">
           <button type="button" className="btn-secondaire" onClick={retourListe}>← Retour à la liste</button>
           <div className="boutons-ligne">
@@ -336,7 +336,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
                 )}
               </div>
               <div>
-                <p><strong>Canal :</strong> {rec.canal}</p>
                 <p><strong>Contrat :</strong> {rec.contrat || "—"}</p>
                 <p><strong>Reçue le :</strong> {rec.date_reception.slice(0, 10)}</p>
                 <p><strong>Gestionnaire :</strong> {nomsGestionnaires[rec.gestionnaire_id] || "non affecté"}</p>
@@ -506,7 +505,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
   }
 
   return (
-    <div className="page">
+    <div className="page page-pleine-largeur">
       <h1>Réclamation</h1>
 
       {erreur && <p className="erreur">{erreur}</p>}
@@ -625,7 +624,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
 
 function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
   const [contrat, setContrat] = useState(rec.contrat || "");
-  const [canal, setCanal] = useState(rec.canal);
   const [motif, setMotif] = useState(rec.motif);
   const [description, setDescription] = useState(rec.description);
   const [attestation, setAttestation] = useState(rec.attestation || "");
@@ -644,7 +642,7 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
         return;
       }
       if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
-        toast.error(`Le numéro de sinistre doit respecter le format ${EXEMPLE_NUMERO_SINISTRE}.`);
+        toast.error("Le numéro de sinistre doit contenir exactement 10 chiffres.");
         return;
       }
     }
@@ -664,7 +662,6 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
       token,
       body: {
         contrat: contrat || null,
-        canal,
         motif,
         description,
         attestation: attestation || null,
@@ -685,15 +682,6 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
     <>
       <div className="colonnes">
         <div>
-          <label>
-            Canal
-            <select value={canal} onChange={(e) => setCanal(e.target.value)}>
-              <option value="telephone">Téléphone</option>
-              <option value="email">Email</option>
-              <option value="courrier">Courrier</option>
-              <option value="agence">Agence</option>
-            </select>
-          </label>
           <label>
             Motif
             <select value={motif} onChange={(e) => setMotif(e.target.value)}>
@@ -734,8 +722,9 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
               <input
                 placeholder={EXEMPLE_NUMERO_SINISTRE}
                 value={numeroSinistre}
-                onChange={(e) => setNumeroSinistre(e.target.value)}
-                pattern="^SIN-\d{4}-\d{6}$"
+                onChange={(e) => setNumeroSinistre(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                pattern={REGEX_NUMERO_SINISTRE.source}
+                inputMode="numeric"
                 required
               />
             </label>

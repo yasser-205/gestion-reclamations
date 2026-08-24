@@ -4,15 +4,9 @@ from enum import Enum
 from typing import Optional
 import re
 
-REGEX_NUMERO_SINISTRE = re.compile(r"^SIN-\d{4}-\d{6}$")
+REGEX_NUMERO_SINISTRE = re.compile(r"^\d{10}$")
 REGEX_ATTESTATION = re.compile(r"^(CF|C) \d{4} / \d{6}$")
 REGEX_MATRICULATION = re.compile(r"^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$")
-
-class Canal(str,Enum):
-    telephone = "telephone"
-    email = "email"
-    courrier = "courrier"
-    agence = "agence"
 
 class Motif(str,Enum):
     remboursement = "remboursement"
@@ -49,7 +43,6 @@ class ReclamationBase(BaseModel):
     type_reclamation: TypeReclamation = TypeReclamation.production
     client_id :str
     contrat: Optional[str] = None
-    canal : Canal
     motif : Motif
     description : str
     attestation: Optional[str] = None
@@ -62,7 +55,7 @@ class ReclamationCreation(ReclamationBase):
     def verifier_format_numero_sinistre(cls, valeur):
         if valeur is not None and not REGEX_NUMERO_SINISTRE.match(valeur):
             raise ValueError(
-                "Le numéro de sinistre doit respecter le format SIN-AAAA-000000 (ex: SIN-2026-000123)."
+                "Le numéro de sinistre doit contenir exactement 10 chiffres."
             )
         return valeur
 
