@@ -18,6 +18,7 @@ function Employes({ token }) {
   const [erreur, setErreur] = useState("");
   const [recharge, setRecharge] = useState(0);
   const [selectionId, setSelectionId] = useState("");
+  const [creationOuverte, setCreationOuverte] = useState(false);
 
   const [login, setLogin] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
@@ -79,6 +80,7 @@ function Employes({ token }) {
       setNom("");
       setPrenom("");
       setRole(ROLES[0].valeur);
+      setCreationOuverte(false);
       setRecharge((n) => n + 1);
     } else if (rep.status === 400) {
       setErreurForm(rep.data?.detail || "Requête invalide.");
@@ -91,61 +93,77 @@ function Employes({ token }) {
     return <DetailEmploye token={token} employe={employe} onRetour={retourListe} onModifie={() => setRecharge((n) => n + 1)} />;
   }
 
-  return (
-    <div className="page page-formulaire">
-      <div className="entete-page">
-        <h1>Employés</h1>
-        <p className="sous-titre">Créer et consulter les comptes du personnel.</p>
-      </div>
-
-      <form className="carte formulaire-pro" onSubmit={creer}>
-        <div className="groupe-champs">
-          <h3>Nouvel employé</h3>
-          <div className="champs-grille">
-            <label>
-              Login
-              <input value={login} onChange={(e) => setLogin(e.target.value)} />
-            </label>
-            <label>
-              Mot de passe
-              <input
-                type="password"
-                value={motDePasse}
-                onChange={(e) => setMotDePasse(e.target.value)}
-                pattern={REGEX_MOT_DE_PASSE.source}
-                title={MESSAGE_MOT_DE_PASSE}
-              />
-            </label>
-            <label>
-              Nom
-              <input value={nom} onChange={(e) => setNom(e.target.value)} />
-            </label>
-            <label>
-              Prénom
-              <input value={prenom} onChange={(e) => setPrenom(e.target.value)} />
-            </label>
-            <label>
-              Rôle
-              <select value={role} onChange={(e) => setRole(e.target.value)}>
-                {ROLES.map((r) => (
-                  <option key={r.valeur} value={r.valeur}>{r.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
-
-        {erreurForm && <p className="erreur">{erreurForm}</p>}
-
-        <div className="pied-formulaire">
-          <button type="submit" className="btn-primaire" disabled={envoiEnCours}>
-            {envoiEnCours && <Spinner taille={14} />}
-            {envoiEnCours ? "Création…" : "Créer l'employé"}
+  if (creationOuverte) {
+    return (
+      <div className="page page-formulaire">
+        <div className="entete-page">
+          <button type="button" className="btn-secondaire" onClick={() => setCreationOuverte(false)}>
+            ← Retour à la liste
           </button>
         </div>
-      </form>
 
-      <h2>Employés existants</h2>
+        <form className="carte formulaire-pro" onSubmit={creer}>
+          <div className="groupe-champs">
+            <h3>Nouvel employé</h3>
+            <div className="champs-grille">
+              <label>
+                Login
+                <input value={login} onChange={(e) => setLogin(e.target.value)} />
+              </label>
+              <label>
+                Mot de passe
+                <input
+                  type="password"
+                  value={motDePasse}
+                  onChange={(e) => setMotDePasse(e.target.value)}
+                  pattern={REGEX_MOT_DE_PASSE.source}
+                  title={MESSAGE_MOT_DE_PASSE}
+                />
+              </label>
+              <label>
+                Nom
+                <input value={nom} onChange={(e) => setNom(e.target.value)} />
+              </label>
+              <label>
+                Prénom
+                <input value={prenom} onChange={(e) => setPrenom(e.target.value)} />
+              </label>
+              <label>
+                Rôle
+                <select value={role} onChange={(e) => setRole(e.target.value)}>
+                  {ROLES.map((r) => (
+                    <option key={r.valeur} value={r.valeur}>{r.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {erreurForm && <p className="erreur">{erreurForm}</p>}
+
+          <div className="pied-formulaire">
+            <button type="submit" className="btn-primaire" disabled={envoiEnCours}>
+              {envoiEnCours && <Spinner taille={14} />}
+              {envoiEnCours ? "Création…" : "Créer l'employé"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <div className="entete-page entete-page-action">
+        <div>
+          <h1>Employés</h1>
+          <p className="sous-titre">Consulter et gérer les comptes du personnel.</p>
+        </div>
+        <button type="button" className="btn-primaire" onClick={() => setCreationOuverte(true)}>
+          + Nouvel employé
+        </button>
+      </div>
+
       {erreur && <p className="erreur">{erreur}</p>}
       {!utilisateurs && !erreur && <p className="chargement-page"><Spinner /> Chargement…</p>}
       {utilisateurs && utilisateurs.length === 0 && (

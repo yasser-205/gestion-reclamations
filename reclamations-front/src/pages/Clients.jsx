@@ -46,7 +46,7 @@ function Clients({ token, moi, onVoirReclamation }) {
   }
 
   return (
-    <div className="page">
+    <div className="page page-pleine-largeur">
       <h1>Clients</h1>
 
       {erreur && <p className="erreur">{erreur}</p>}
@@ -171,7 +171,7 @@ function DetailClient({ client, token, moi, onRetour, onModifie, onVoirReclamati
   }
 
   return (
-    <div className="page page-formulaire">
+    <div className="page page-formulaire page-pleine-largeur">
       <div className="entete-page">
         <button type="button" className="btn-secondaire" onClick={onRetour}>← Retour à la liste</button>
       </div>

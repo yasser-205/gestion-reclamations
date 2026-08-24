@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 import { apiRequest, apiUpload, apiOuvrirFichier, messageErreur } from "../api";
 import Spinner from "../components/Spinner";
 import StatutPill from "../components/StatutPill";
@@ -547,9 +548,9 @@ function Reclamations({ token, moi, cibleReclamation }) {
             <button
               type="button"
               className="btn-secondaire"
-              onClick={() => exporterCSV(reclamationsFiltrees)}
+              onClick={() => exporterExcel(reclamationsFiltrees)}
             >
-              Exporter en CSV
+              Exporter en Excel
             </button>
           </div>
 
@@ -752,28 +753,17 @@ function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
 
 export default Reclamations;
 
-function exporterCSV(reclamations) {
-  const entetes = ["Numéro", "Statut", "Type", "Motif", "Date réception"];
+function exporterExcel(reclamations) {
+  const lignes = reclamations.map((r) => ({
+    "Numéro": r.numero_reclamation,
+    "Statut": r.statut,
+    "Type": r.type_reclamation,
+    "Motif": r.motif,
+    "Date réception": r.date_reception ? r.date_reception.slice(0, 10) : "",
+  }));
 
-  const lignes = reclamations.map((r) => [
-    r.numero_reclamation,
-    r.statut,
-    r.type_reclamation,
-    r.motif,
-    r.date_reception ? r.date_reception.slice(0, 10) : "",
-  ]);
-
-  const contenu = [entetes, ...lignes]
-    .map((ligne) => ligne.map((c) => `"${c}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob([contenu], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const lien = document.createElement("a");
-  lien.href = url;
-  lien.download = "reclamations.csv";
-  document.body.appendChild(lien);
-  lien.click();
-  document.body.removeChild(lien);
-  URL.revokeObjectURL(url);
+  const feuille = XLSX.utils.json_to_sheet(lignes);
+  const classeur = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(classeur, feuille, "Réclamations");
+  XLSX.writeFile(classeur, "reclamations.xlsx");
 }
