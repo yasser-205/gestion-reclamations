@@ -247,6 +247,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin-top: 32px;
 }
 .entete-page-action h1 {
   margin-bottom: 4px;

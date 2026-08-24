@@ -19,6 +19,7 @@ function Employes({ token }) {
   const [recharge, setRecharge] = useState(0);
   const [selectionId, setSelectionId] = useState("");
   const [creationOuverte, setCreationOuverte] = useState(false);
+  const [recherche, setRecherche] = useState("");
 
   const [login, setLogin] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
@@ -43,6 +44,12 @@ function Employes({ token }) {
   }, [token, recharge]);
 
   const employe = utilisateurs?.find((u) => u.id === selectionId) || null;
+
+  const utilisateursFiltres = utilisateurs?.filter((u) => {
+    if (!recherche) return true;
+    const texte = recherche.toLowerCase();
+    return u.nom.toLowerCase().includes(texte) || u.prenom.toLowerCase().includes(texte);
+  }) || [];
 
   function ouvrirDetail(u) {
     setSelectionId(u.id);
@@ -153,7 +160,7 @@ function Employes({ token }) {
   }
 
   return (
-    <div className="page">
+    <div className="page page-pleine-largeur">
       <div className="entete-page entete-page-action">
         <div>
           <h1>Employés</h1>
@@ -170,28 +177,43 @@ function Employes({ token }) {
         <p className="info">Aucun employé pour le moment.</p>
       )}
       {utilisateurs && utilisateurs.length > 0 && (
-        <table className="tableau">
-          <thead>
-            <tr>
-              <th>Login</th>
-              <th>Nom</th>
-              <th>Prénom</th>
-              <th>Rôle</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {utilisateurs.map((u) => (
-              <tr key={u.id} className="ligne-cliquable" onClick={() => ouvrirDetail(u)}>
-                <td>{u.login}</td>
-                <td>{u.nom}</td>
-                <td>{u.prenom}</td>
-                <td>{u.role}</td>
-                <td>{u.actif ? "Actif" : "Désactivé"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="barre-filtres">
+            <input
+              className="filtre-recherche"
+              placeholder="Rechercher (nom, prénom)…"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+            />
+          </div>
+
+          {utilisateursFiltres.length === 0 ? (
+            <p className="info">Aucun employé ne correspond à cette recherche.</p>
+          ) : (
+            <table className="tableau">
+              <thead>
+                <tr>
+                  <th>Login</th>
+                  <th>Nom</th>
+                  <th>Prénom</th>
+                  <th>Rôle</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {utilisateursFiltres.map((u) => (
+                  <tr key={u.id} className="ligne-cliquable" onClick={() => ouvrirDetail(u)}>
+                    <td>{u.login}</td>
+                    <td>{u.nom}</td>
+                    <td>{u.prenom}</td>
+                    <td>{u.role}</td>
+                    <td>{u.actif ? "Actif" : "Désactivé"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
       )}
     </div>
   );
