@@ -7,22 +7,18 @@ import io
 from app.models.reclamation import (
     ReclamationCreation,
     ReclamationPublic,
-    Motif,
     Statut,
-    REGEX_NUMERO_SINISTRE,
-    REGEX_ATTESTATION,
-    REGEX_MATRICULATION,
 )
 from app.repositories import reclamation_repo, utilisateur_repo, fichier_repo
 from app.core.dependances import get_utilisateur_courant, exiger_role
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/reclamation", tags=["reclamations"])
 
 @router.post("",response_model=ReclamationPublic, status_code=201)
 def creer(
     donnees : ReclamationCreation,
-    utilisateur : dict = Depends(exiger_role("client", "admin")),
+    utilisateur : dict = Depends(exiger_role("client")),
 ):
     auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
     return reclamation_repo.creer_reclamation(donnees.model_dump(), auteur)
@@ -34,8 +30,12 @@ def lister(client_id: Optional[str] = None, utilisateur: dict = Depends(get_util
     return reclamation_repo.lister(client_id=client_id)
 
 @router.get("/stat")
-def stats(utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin"))):
-    return reclamation_repo.statistique()
+def stats(
+    annee: Optional[int] = None,
+    mois: Optional[int] = None,
+    utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin")),
+):
+    return reclamation_repo.statistique(annee=annee, mois=mois)
 
 @router.get("/pieces-jointes/{file_id}")
 def telecharger_piece(
@@ -67,64 +67,6 @@ def consulter(id: str, utilisateur: dict = Depends(get_utilisateur_courant)):
     if utilisateur["role"] == "client" and reclamation["client_id"] != utilisateur.get("client_id"):
         raise HTTPException(status_code=404, detail="Réclamation introuvable")
     return reclamation
-
-class ModificationReclamation(BaseModel):
-    contrat: Optional[str] = None
-    motif: Optional[Motif] = None
-    description: Optional[str] = None
-    attestation: Optional[str] = None
-    matriculation: Optional[str] = None
-    numero_sinistre: Optional[str] = None
-
-    @field_validator("numero_sinistre")
-    @classmethod
-    def verifier_format_numero_sinistre(cls, valeur):
-        if valeur is not None and not REGEX_NUMERO_SINISTRE.match(valeur):
-            raise ValueError(
-                "Le numéro de sinistre doit contenir exactement 10 chiffres."
-            )
-        return valeur
-
-    @field_validator("attestation")
-    @classmethod
-    def verifier_format_attestation(cls, valeur):
-        if valeur is not None and not REGEX_ATTESTATION.match(valeur):
-            raise ValueError(
-                "L'attestation doit respecter le format CF 1234 / 123456 ou C 1234 / 123456."
-            )
-        return valeur
-
-    @field_validator("matriculation")
-    @classmethod
-    def verifier_format_matriculation(cls, valeur):
-        if valeur is not None and not REGEX_MATRICULATION.match(valeur):
-            raise ValueError(
-                "La matriculation doit respecter le format 12345-A-6, 12345-WW-1 ou 12345-RT-1."
-            )
-        return valeur
-
-@router.patch("/{id}", response_model=ReclamationPublic)
-def modifier(
-    id: str,
-    donnees: ModificationReclamation,
-    utilisateur: dict = Depends(exiger_role("gestionnaire", "responsable", "admin")),
-):
-    auteur = f"{utilisateur['prenom']} {utilisateur['nom']}"
-    maj = {cle: valeur for cle, valeur in donnees.model_dump().items() if valeur is not None}
-    reclamation = reclamation_repo.modifier(id, maj, auteur)
-    if reclamation is None:
-        raise HTTPException(status_code=404, detail="Réclamation introuvable")
-    return reclamation
-
-@router.delete("/{id}", status_code=204)
-def supprimer(id: str, utilisateur: dict = Depends(get_utilisateur_courant)):
-    if utilisateur["role"] == "client":
-        raise HTTPException(status_code=403, detail="Acces refusé : role insuffisant")
-    reclamation = reclamation_repo.get_par_id(id)
-    if reclamation is None:
-        raise HTTPException(status_code=404, detail="Réclamation introuvable")
-    reclamation_repo.supprimer(id)
-
 
 class ChangementStaut(BaseModel):
     statut: Statut
@@ -162,7 +104,7 @@ class Affectation(BaseModel):
 def affecter(
     id: str,
     donnees: Affectation,
-    utilisateur: dict = Depends(exiger_role("responsable", "admin")),
+    utilisateur: dict = Depends(exiger_role("responsable")),
 ):
     gestionnaire = utilisateur_repo.get_par_id(donnees.gestionnaire_id)
     if gestionnaire is None:

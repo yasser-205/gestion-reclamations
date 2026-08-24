@@ -21,10 +21,19 @@ const CHROME = {
 };
 
 const MOIS_ABBR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const MOIS_NOMS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
 
 function formatMois(cle) {
   const [annee, mois] = cle.split("-");
   return `${MOIS_ABBR[parseInt(mois, 10) - 1]} ${annee}`;
+}
+
+function formatJour(cle) {
+  const [, , jour] = cle.split("-");
+  return `${parseInt(jour, 10)}`;
 }
 
 function themeActuel() {
@@ -36,6 +45,8 @@ function Dashboard({ token }) {
   const [noms, setNoms] = useState({});
   const [erreur, setErreur] = useState("");
   const [theme, setTheme] = useState(themeActuel);
+  const [filtreAnnee, setFiltreAnnee] = useState("");
+  const [filtreMois, setFiltreMois] = useState("");
 
   useEffect(() => {
     const observateur = new MutationObserver(() => setTheme(themeActuel()));
@@ -45,8 +56,13 @@ function Dashboard({ token }) {
 
   useEffect(() => {
     let ignore = false;
+    const parametres = new URLSearchParams();
+    if (filtreAnnee) parametres.set("annee", filtreAnnee);
+    if (filtreAnnee && filtreMois) parametres.set("mois", filtreMois);
+    const suffixe = parametres.toString() ? `?${parametres.toString()}` : "";
+
     Promise.all([
-      apiRequest("/reclamation/stat", { token }),
+      apiRequest(`/reclamation/stat${suffixe}`, { token }),
       apiRequest("/utilisateurs", { token }),
     ]).then(([repStats, repUsers]) => {
       if (ignore) return;
@@ -65,20 +81,51 @@ function Dashboard({ token }) {
       }
     });
     return () => { ignore = true; };
-  }, [token]);
+  }, [token, filtreAnnee, filtreMois]);
 
   if (erreur) return <p className="erreur">{erreur}</p>;
   if (!stats) {
     return <p className="chargement-page"><Spinner /> Chargement…</p>;
   }
 
+  const parJour = stats.granularite_evolution === "jour";
   const evolution = Object.entries(stats.par_mois || {})
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([mois, valeur]) => ({ mois: formatMois(mois), valeur }));
+    .map(([cle, valeur]) => ({ mois: parJour ? formatJour(cle) : formatMois(cle), valeur }));
+
+  function changerAnnee(valeur) {
+    setFiltreAnnee(valeur);
+    setFiltreMois("");
+  }
 
   return (
     <div className="page">
-      <h1>Tableau de bord</h1>
+      <div className="entete-page entete-page-action">
+        <h1>Tableau de bord</h1>
+        <div className="barre-filtres">
+          <select value={filtreAnnee} onChange={(e) => changerAnnee(e.target.value)}>
+            <option value="">Toutes les années</option>
+            {(stats.annees_disponibles || []).map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+          <select
+            value={filtreMois}
+            onChange={(e) => setFiltreMois(e.target.value)}
+            disabled={!filtreAnnee}
+          >
+            <option value="">Tous les mois</option>
+            {MOIS_NOMS.map((nom, i) => (
+              <option key={nom} value={i + 1}>{nom}</option>
+            ))}
+          </select>
+          {(filtreAnnee || filtreMois) && (
+            <button type="button" className="btn-secondaire" onClick={() => changerAnnee("")}>
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="grille-kpi">
         <div className="tuile-kpi">
@@ -92,7 +139,7 @@ function Dashboard({ token }) {
       </div>
 
       <div className="bloc-stat bloc-evolution">
-        <h2>Évolution par mois de réception</h2>
+        <h2>{parJour ? `Évolution par jour — ${MOIS_NOMS[filtreMois - 1]}` : "Évolution par mois de réception"}</h2>
         {evolution.length === 0 ? (
           <p className="info">Aucune donnée.</p>
         ) : (

@@ -37,24 +37,16 @@ const STATUTS = [
 
 const MOTIFS = ["remboursement", "delai", "prime", "contrat", "service", "autre"];
 const TAILLE_PAGE = 10;
-const REGEX_NUMERO_SINISTRE = /^\d{10}$/;
-const EXEMPLE_NUMERO_SINISTRE = "1234567890";
-const REGEX_ATTESTATION = /^(CF|C) \d{4} \/ \d{6}$/;
-const EXEMPLE_ATTESTATION = "CF 1234 / 123456 ou C 1234 / 123456";
-const REGEX_MATRICULATION = /^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$/;
-const EXEMPLE_MATRICULATION = "12345-A-6, 12345-WW-1 ou 12345-RT-1";
 
 function Reclamations({ token, moi, cibleReclamation }) {
   const role = moi?.role;
   const estClient = role === "client";
-  const peutGererReclamation = ["gestionnaire", "responsable", "admin"].includes(role);
-  const peutAffecter = ["responsable", "admin"].includes(role);
+  const peutAffecter = role === "responsable";
   const [reclamations, setReclamations] = useState(null);
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [erreur, setErreur] = useState("");
 
   const [selectionId, setSelectionId] = useState("");
-  const [modifierOuvert, setModifierOuvert] = useState(false);
   const [gestionnaireChoisi, setGestionnaireChoisi] = useState("");
   const [reponseTexte, setReponseTexte] = useState("");
   const [reponseFichiers, setReponseFichiers] = useState([]);
@@ -62,7 +54,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
   const [enCoursPriseEnCharge, setEnCoursPriseEnCharge] = useState(false);
   const [enCoursCloture, setEnCoursCloture] = useState(false);
   const [enCoursAffectation, setEnCoursAffectation] = useState(false);
-  const [enCoursSuppression, setEnCoursSuppression] = useState(false);
   const [enCoursReponse, setEnCoursReponse] = useState(false);
   const [recharge, setRecharge] = useState(0);
   const confirmationReponse = useConfirmation();
@@ -102,7 +93,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
       setGestionnaireChoisi("");
       setReponseTexte("");
       setReponseFichiers([]);
-      setModifierOuvert(false);
     }
     setCleCibleTraitee(cibleReclamation.cle);
   }
@@ -171,7 +161,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
     setGestionnaireChoisi("");
     setReponseTexte("");
     setReponseFichiers([]);
-    setModifierOuvert(false);
   }
 
   function retourListe() {
@@ -249,22 +238,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
     }
   }
 
-  async function supprimer() {
-    if (!window.confirm(`Supprimer la réclamation ${rec.numero_reclamation} ? Cette action est irréversible.`)) {
-      return;
-    }
-    setEnCoursSuppression(true);
-    const rep = await apiRequest(`/reclamation/${rec.id}`, { method: "DELETE", token });
-    setEnCoursSuppression(false);
-    if (rep.ok) {
-      toast.success("Réclamation supprimée.");
-      setSelectionId("");
-      setRecharge((n) => n + 1);
-    } else {
-      toast.error(messageErreur(rep.status));
-    }
-  }
-
   if (!reclamations && !erreur) {
     return (
       <div className="page page-pleine-largeur">
@@ -292,78 +265,54 @@ function Reclamations({ token, moi, cibleReclamation }) {
       <div className="page page-pleine-largeur">
         <div className="entete-detail">
           <button type="button" className="btn-secondaire" onClick={retourListe}>← Retour à la liste</button>
-          <div className="boutons-ligne">
-            {peutGererReclamation && !modifierOuvert && (
-              <button type="button" className="btn-secondaire" onClick={() => setModifierOuvert(true)}>
-                Modifier les détails
-              </button>
-            )}
-            {!estClient && (
-              <button type="button" className="btn-danger" onClick={supprimer} disabled={enCoursSuppression}>
-                {enCoursSuppression && <Spinner taille={14} />}
-                Supprimer la réclamation
-              </button>
-            )}
-          </div>
         </div>
         <h1>{rec.numero_reclamation}</h1>
 
-        {modifierOuvert ? (
-          <FormulaireModification
-            rec={rec}
-            token={token}
-            onAnnule={() => setModifierOuvert(false)}
-            onEnregistre={() => {
-              setModifierOuvert(false);
-              setRecharge((n) => n + 1);
-            }}
-          />
-        ) : (
-          <>
-            <div className="colonnes">
-              <div>
-                <p><strong>Numéro :</strong> {rec.numero_reclamation}</p>
-                <p><strong>Statut :</strong> <StatutPill statut={rec.statut} /></p>
-                <p><strong>Type :</strong> {rec.type_reclamation}</p>
-                <p><strong>Motif :</strong> {rec.motif}</p>
-                {rec.type_reclamation === "production" && (
-                  <>
-                    <p><strong>Attestation :</strong> {rec.attestation || "—"}</p>
-                    <p><strong>Matriculation :</strong> {rec.matriculation || "—"}</p>
-                  </>
-                )}
-                {rec.type_reclamation === "sinistre" && (
-                  <p><strong>Numéro de sinistre :</strong> {rec.numero_sinistre || "—"}</p>
-                )}
-              </div>
-              <div>
-                <p><strong>Contrat :</strong> {rec.contrat || "—"}</p>
-                <p><strong>Reçue le :</strong> {rec.date_reception.slice(0, 10)}</p>
-                <p><strong>Gestionnaire :</strong> {nomsGestionnaires[rec.gestionnaire_id] || "non affecté"}</p>
-                <p><strong>Téléphone du client :</strong> {clientDetail?.id === rec.client_id ? clientDetail.telephone : "…"}</p>
-              </div>
-            </div>
-
-            <p><strong>Description :</strong> {rec.description}</p>
-
-            {rec.pieces_jointes && rec.pieces_jointes.length > 0 && (
+        <div className="colonnes">
+          <div>
+            <p><strong>Numéro :</strong> {rec.numero_reclamation}</p>
+            <p><strong>Statut :</strong> <StatutPill statut={rec.statut} /></p>
+            <p><strong>Type :</strong> {rec.type_reclamation}</p>
+            <p><strong>Motif :</strong> {rec.motif}</p>
+            {rec.type_reclamation === "production" && (
               <>
-                <h3>Pièces jointes</h3>
-                <ul className="pieces-jointes">
-                  {rec.pieces_jointes.map((piece, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        className="lien-piece-jointe"
-                        onClick={() => ouvrirPieceJointe(piece.file_id)}
-                      >
-                        {piece.nom}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <p><strong>Attestation :</strong> {rec.attestation || "—"}</p>
+                <p><strong>Matriculation :</strong> {rec.matriculation || "—"}</p>
               </>
             )}
+            {rec.type_reclamation === "sinistre" && (
+              <>
+                <p><strong>Numéro de sinistre :</strong> {rec.numero_sinistre || "—"}</p>
+                <p><strong>Date de sinistre :</strong> {rec.date_sinistre || "—"}</p>
+                <p><strong>Immatriculation :</strong> {rec.matriculation || "—"}</p>
+              </>
+            )}
+          </div>
+          <div>
+            <p><strong>Reçue le :</strong> {rec.date_reception.slice(0, 10)}</p>
+            <p><strong>Gestionnaire :</strong> {nomsGestionnaires[rec.gestionnaire_id] || "non affecté"}</p>
+            <p><strong>Téléphone du client :</strong> {clientDetail?.id === rec.client_id ? clientDetail.telephone : "…"}</p>
+          </div>
+        </div>
+
+        <p><strong>Description :</strong> {rec.description}</p>
+
+        {rec.pieces_jointes && rec.pieces_jointes.length > 0 && (
+          <>
+            <h3>Pièces jointes</h3>
+            <ul className="pieces-jointes">
+              {rec.pieces_jointes.map((piece, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    className="lien-piece-jointe"
+                    onClick={() => ouvrirPieceJointe(piece.file_id)}
+                  >
+                    {piece.nom}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </>
         )}
 
@@ -547,7 +496,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
             )}
             <button
               type="button"
-              className="btn-secondaire"
+              className="btn-succes"
               onClick={() => exporterExcel(reclamationsFiltrees)}
             >
               Exporter en Excel
@@ -581,7 +530,7 @@ function Reclamations({ token, moi, cibleReclamation }) {
                           className="btn-secondaire btn-petit"
                           onClick={(e) => { e.stopPropagation(); ouvrirDetail(r); }}
                         >
-                          Répondre
+                          Détail
                         </button>
                       </td>
                     </tr>
@@ -620,134 +569,6 @@ function Reclamations({ token, moi, cibleReclamation }) {
         </>
       )}
     </div>
-  );
-}
-
-function FormulaireModification({ rec, token, onAnnule, onEnregistre }) {
-  const [contrat, setContrat] = useState(rec.contrat || "");
-  const [motif, setMotif] = useState(rec.motif);
-  const [description, setDescription] = useState(rec.description);
-  const [attestation, setAttestation] = useState(rec.attestation || "");
-  const [matriculation, setMatriculation] = useState(rec.matriculation || "");
-  const [numeroSinistre, setNumeroSinistre] = useState(rec.numero_sinistre || "");
-  const [enCours, setEnCours] = useState(false);
-
-  async function enregistrer() {
-    if (!description.trim()) {
-      toast.error("La description est obligatoire.");
-      return;
-    }
-    if (rec.type_reclamation === "sinistre") {
-      if (!numeroSinistre) {
-        toast.error("Le numéro de sinistre est obligatoire.");
-        return;
-      }
-      if (!REGEX_NUMERO_SINISTRE.test(numeroSinistre)) {
-        toast.error("Le numéro de sinistre doit contenir exactement 10 chiffres.");
-        return;
-      }
-    }
-    if (rec.type_reclamation === "production") {
-      if (attestation && !REGEX_ATTESTATION.test(attestation)) {
-        toast.error(`L'attestation doit respecter le format ${EXEMPLE_ATTESTATION}.`);
-        return;
-      }
-      if (matriculation && !REGEX_MATRICULATION.test(matriculation)) {
-        toast.error(`La matriculation doit respecter le format ${EXEMPLE_MATRICULATION}.`);
-        return;
-      }
-    }
-    setEnCours(true);
-    const rep = await apiRequest(`/reclamation/${rec.id}`, {
-      method: "PATCH",
-      token,
-      body: {
-        contrat: contrat || null,
-        motif,
-        description,
-        attestation: attestation || null,
-        matriculation: matriculation || null,
-        numero_sinistre: rec.type_reclamation === "sinistre" ? numeroSinistre : null,
-      },
-    });
-    setEnCours(false);
-    if (rep.ok) {
-      toast.success("Détails mis à jour.");
-      onEnregistre();
-    } else {
-      toast.error(messageErreur(rep.status));
-    }
-  }
-
-  return (
-    <>
-      <div className="colonnes">
-        <div>
-          <label>
-            Motif
-            <select value={motif} onChange={(e) => setMotif(e.target.value)}>
-              {MOTIFS.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
-        </div>
-        <div>
-          <label>
-            Numéro de contrat
-            <input value={contrat} onChange={(e) => setContrat(e.target.value)} />
-          </label>
-          {rec.type_reclamation === "production" && (
-            <>
-              <label>
-                Attestation
-                <input
-                  placeholder={EXEMPLE_ATTESTATION}
-                  value={attestation}
-                  onChange={(e) => setAttestation(e.target.value)}
-                  pattern={REGEX_ATTESTATION.source}
-                />
-              </label>
-              <label>
-                Matriculation
-                <input
-                  placeholder={EXEMPLE_MATRICULATION}
-                  value={matriculation}
-                  onChange={(e) => setMatriculation(e.target.value)}
-                  pattern={REGEX_MATRICULATION.source}
-                />
-              </label>
-            </>
-          )}
-          {rec.type_reclamation === "sinistre" && (
-            <label>
-              Numéro de sinistre
-              <input
-                placeholder={EXEMPLE_NUMERO_SINISTRE}
-                value={numeroSinistre}
-                onChange={(e) => setNumeroSinistre(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
-                pattern={REGEX_NUMERO_SINISTRE.source}
-                inputMode="numeric"
-                required
-              />
-            </label>
-          )}
-        </div>
-      </div>
-
-      <label>
-        Description
-        <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-
-      <div className="boutons-ligne">
-        <button type="button" className="btn-primaire" onClick={enregistrer} disabled={enCours}>
-          {enCours && <Spinner taille={14} />}
-          Enregistrer
-        </button>
-        <button type="button" className="btn-secondaire" onClick={onAnnule}>
-          Annuler
-        </button>
-      </div>
-    </>
   );
 }
 

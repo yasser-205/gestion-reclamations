@@ -401,6 +401,12 @@
   color: var(--danger);
 }
 
+.btn-succes {
+  background: var(--succes-bg);
+  border-color: var(--succes);
+  color: var(--succes);
+}
+
 .btn-confirmation {
   background: var(--avertissement-bg);
   border-color: var(--avertissement);

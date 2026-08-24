@@ -1,12 +1,12 @@
 from pydantic import BaseModel, model_validator, field_validator
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 import re
 
 REGEX_NUMERO_SINISTRE = re.compile(r"^\d{10}$")
 REGEX_ATTESTATION = re.compile(r"^(CF|C) \d{4} / \d{6}$")
-REGEX_MATRICULATION = re.compile(r"^\d{1,6}-(?:[A-Z]|WW|RT)-\d{1,2}$")
+REGEX_MATRICULATION = re.compile(r"^(?:\d{1,5}-[A-Z] \d{1,2}|WW-\d{1,5}|\d{1,6}-RT-\d{1,2})$")
 
 class Motif(str,Enum):
     remboursement = "remboursement"
@@ -42,12 +42,12 @@ class MessageReponse(BaseModel):
 class ReclamationBase(BaseModel):
     type_reclamation: TypeReclamation = TypeReclamation.production
     client_id :str
-    contrat: Optional[str] = None
     motif : Motif
     description : str
     attestation: Optional[str] = None
     matriculation: Optional[str] = None
     numero_sinistre: Optional[str] = None
+    date_sinistre: Optional[date] = None
 
 class ReclamationCreation(ReclamationBase):
     @field_validator("numero_sinistre")
@@ -73,7 +73,7 @@ class ReclamationCreation(ReclamationBase):
     def verifier_format_matriculation(cls, valeur):
         if valeur is not None and not REGEX_MATRICULATION.match(valeur):
             raise ValueError(
-                "La matriculation doit respecter le format 12345-A-6, 12345-WW-1 ou 12345-RT-1."
+                "La matriculation doit respecter le format 12345-A 12, WW-12345 ou 12345-RT-1."
             )
         return valeur
 
@@ -88,10 +88,15 @@ class ReclamationCreation(ReclamationBase):
 
     @model_validator(mode="after")
     def verifier_champ_sinistre(self):
-        if self.type_reclamation == TypeReclamation.sinistre and not self.numero_sinistre:
-            raise ValueError(
-                "Pour une réclamation de sinistre, le numéro de sinistre est obligatoire."
-            )
+        if self.type_reclamation == TypeReclamation.sinistre:
+            if not self.date_sinistre:
+                raise ValueError(
+                    "Pour une réclamation de sinistre, la date de sinistre est obligatoire."
+                )
+            if not self.matriculation:
+                raise ValueError(
+                    "Pour une réclamation de sinistre, la matriculation est obligatoire."
+                )
         return self
    
 

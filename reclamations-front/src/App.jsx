@@ -60,7 +60,7 @@ function App() {
   }
 
   const pages = ["Réclamations"];
-  if (moi?.role === "client" || moi?.role === "admin") pages.push("Nouvelle réclamation");
+  if (moi?.role === "client") pages.push("Nouvelle réclamation");
   if (moi?.role !== "client" && moi?.role !== "gestionnaire") pages.push("Clients");
   if (moi?.role === "gestionnaire" || moi?.role === "responsable" || moi?.role === "admin") pages.push("Tableau de bord");
   if (moi?.role === "admin") pages.push("Employés");
@@ -86,7 +86,7 @@ function App() {
         {page === "Réclamations" && (
           <Reclamations token={token} moi={moi} cibleReclamation={cibleReclamation} />
         )}
-        {page === "Nouvelle réclamation" && (moi?.role === "client" || moi?.role === "admin") && (
+        {page === "Nouvelle réclamation" && moi?.role === "client" && (
           <NouvelleReclamation token={token} moi={moi} />
         )}
         {page === "Clients" && <Clients token={token} moi={moi} onVoirReclamation={voirReclamation} />}
