@@ -32,11 +32,15 @@ mon_projet/
 
 | Rôle | Peut |
 |---|---|
-| `client` | Créer ses réclamations, consulter les siennes, lire les réponses |
+| `client` | Créer ses réclamations, consulter les siennes, lire et répondre aux réponses |
 | `agent` | Consulter/lister les réclamations et clients |
-| `gestionnaire` | Consulter/lister les réclamations, modifier les détails d'une réclamation, prendre en charge une réclamation (`nouvelle` → `affectée`), la clôturer, y répondre (seulement si elle lui est affectée et tant qu'elle n'est pas clôturée), voir le tableau de bord (pas d'accès aux clients) |
+| `gestionnaire` | Consulter/lister les réclamations, prendre en charge une réclamation (`nouvelle` → `affectée`), la clôturer, y répondre (seulement si elle lui est affectée et tant qu'elle n'est pas clôturée), voir le tableau de bord (pas d'accès aux clients) |
 | `responsable` | + affecter un gestionnaire à une réclamation, répondre à n'importe quelle réclamation non clôturée |
-| `admin` | + créer/modifier les comptes employés, tout le reste |
+| `admin` | + créer/modifier les comptes utilisateurs, consulter l'ensemble ; ne peut ni créer de réclamation ni affecter un gestionnaire |
+
+Aucun rôle ne peut supprimer ou modifier une réclamation une fois créée (seuls le
+changement de statut, la prise en charge, l'affectation et les réponses sont
+possibles).
 
 ## Prérequis
 
@@ -79,8 +83,8 @@ python creer_admin.py          # login: admin / mot de passe: admin123
 ```
 
 À changer ou supprimer avant toute mise en production. Les autres comptes clients
-se créent depuis l'écran d'inscription du front, les comptes employés depuis la
-page "Employés" (admin uniquement).
+se créent depuis l'écran d'inscription du front, les comptes du personnel depuis la
+page "Utilisateurs" (admin uniquement).
 
 ## Frontend
 
@@ -99,21 +103,28 @@ Autres scripts npm : `npm run build` (production), `npm run lint`, `npm run prev
 ## Fonctionnalités principales
 
 - Authentification par token JWT, inscription client en libre-service
-- Réclamations : création (avec pièces jointes optionnelles), filtres
-  (statut/motif/dates/recherche), pagination, export CSV,
-  modification, affectation manuelle à un gestionnaire (responsable/admin), fil de
-  réponses façon chat entre le client et le staff (réservé au gestionnaire en
-  charge ou à un responsable/admin côté staff, et au client une fois que le staff a
-  répondu au moins une fois), tant que la réclamation n'est pas clôturée
+- Réclamations : création par le client (avec pièces jointes optionnelles), deux
+  types — `sinistre` (numéro de sinistre optionnel, date de sinistre et
+  immatriculation obligatoires) et `production` (police et/ou matriculation) —,
+  filtres (statut/motif/dates/recherche), pagination, export Excel (.xlsx),
+  affectation manuelle à un gestionnaire (responsable uniquement), fil de réponses
+  façon chat entre le client et le staff (avec pièces jointes, réservé au
+  gestionnaire en charge ou à un responsable/admin côté staff, et au client une
+  fois que le staff a répondu au moins une fois), tant que la réclamation n'est
+  pas clôturée. Ni suppression ni modification possibles après création.
 - Statuts d'une réclamation, avec transitions automatiques : `nouvelle` (créée,
   pas encore affectée) → `affectee` (prise en charge par un gestionnaire) →
   `en_attente_client` (le staff vient de répondre, en attente du client) ↔
   `en_cours` (le client vient de répondre, le staff doit répondre ou clôturer) →
   `cloturee` (fermée par le gestionnaire)
-- Pièces jointes : ajout de fichiers à la création d'une réclamation, stockage dans
-  MongoDB (GridFS), consultation/téléchargement depuis le détail de la réclamation
+- Pièces jointes : ajout de fichiers à la création d'une réclamation ou à une
+  réponse, stockage dans MongoDB (GridFS), consultation/téléchargement depuis le
+  détail de la réclamation
 - Clients : liste, fiche modifiable, historique de leurs réclamations
-- Employés : création et modification des comptes du personnel (admin)
-- Tableau de bord : indicateurs clés (total, délai moyen, taux dans les délais) et
-  graphiques (répartition par statut/motif/gestionnaire, évolution mensuelle)
+- Utilisateurs : création et modification des comptes du personnel, recherche par
+  nom/prénom (admin)
+- Tableau de bord : indicateurs clés (total, délai moyen) et graphiques
+  (répartition par statut/motif/gestionnaire, évolution des réclamations reçues),
+  avec filtre par année et par mois — l'évolution bascule automatiquement en vue
+  par jour lorsqu'un mois précis est sélectionné
 - Mode sombre, notifications (toasts) pour les actions
