@@ -81,7 +81,7 @@ function Employes({ token }) {
     setEnvoiEnCours(false);
 
     if (rep.ok) {
-      toast.success(`Employé ${rep.data.prenom} ${rep.data.nom} créé.`);
+      toast.success(`Utilisateur ${rep.data.prenom} ${rep.data.nom} créé.`);
       setLogin("");
       setMotDePasse("");
       setNom("");
@@ -111,7 +111,7 @@ function Employes({ token }) {
 
         <form className="carte formulaire-pro" onSubmit={creer}>
           <div className="groupe-champs">
-            <h3>Nouvel employé</h3>
+            <h3>Nouvel utilisateur</h3>
             <div className="champs-grille">
               <label>
                 Login
@@ -151,7 +151,7 @@ function Employes({ token }) {
           <div className="pied-formulaire">
             <button type="submit" className="btn-primaire" disabled={envoiEnCours}>
               {envoiEnCours && <Spinner taille={14} />}
-              {envoiEnCours ? "Création…" : "Créer l'employé"}
+              {envoiEnCours ? "Création…" : "Créer l'utilisateur"}
             </button>
           </div>
         </form>
@@ -163,18 +163,18 @@ function Employes({ token }) {
     <div className="page page-pleine-largeur">
       <div className="entete-page entete-page-action">
         <div>
-          <h1>Employés</h1>
+          <h1>Utilisateurs</h1>
           <p className="sous-titre">Consulter et gérer les comptes du personnel.</p>
         </div>
         <button type="button" className="btn-primaire" onClick={() => setCreationOuverte(true)}>
-          + Nouvel employé
+          + Nouvel utilisateur
         </button>
       </div>
 
       {erreur && <p className="erreur">{erreur}</p>}
       {!utilisateurs && !erreur && <p className="chargement-page"><Spinner /> Chargement…</p>}
       {utilisateurs && utilisateurs.length === 0 && (
-        <p className="info">Aucun employé pour le moment.</p>
+        <p className="info">Aucun utilisateur pour le moment.</p>
       )}
       {utilisateurs && utilisateurs.length > 0 && (
         <>
@@ -188,7 +188,7 @@ function Employes({ token }) {
           </div>
 
           {utilisateursFiltres.length === 0 ? (
-            <p className="info">Aucun employé ne correspond à cette recherche.</p>
+            <p className="info">Aucun utilisateur ne correspond à cette recherche.</p>
           ) : (
             <table className="tableau">
               <thead>

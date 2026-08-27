@@ -492,6 +492,8 @@
   flex-direction: column;
   gap: 10px;
   max-width: 640px;
+  max-height: 420px;
+  overflow-y: auto;
   background: var(--bg-soft);
   border-radius: 12px;
 }
@@ -564,6 +566,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .pieces-jointes {

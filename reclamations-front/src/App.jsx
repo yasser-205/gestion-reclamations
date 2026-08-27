@@ -63,7 +63,7 @@ function App() {
   if (moi?.role === "client") pages.push("Nouvelle réclamation");
   if (moi?.role !== "client" && moi?.role !== "gestionnaire") pages.push("Clients");
   if (moi?.role === "gestionnaire" || moi?.role === "responsable" || moi?.role === "admin") pages.push("Tableau de bord");
-  if (moi?.role === "admin") pages.push("Employés");
+  if (moi?.role === "admin") pages.push("Utilisateurs");
 
   return (
     <div className="app-shell">
@@ -91,7 +91,7 @@ function App() {
         )}
         {page === "Clients" && <Clients token={token} moi={moi} onVoirReclamation={voirReclamation} />}
         {page === "Tableau de bord" && <Dashboard token={token} />}
-        {page === "Employés" && <Employes token={token} />}
+        {page === "Utilisateurs" && <Employes token={token} />}
         {page === "Mon profil" && (
           <MonProfil token={token} moi={moi} onRetour={() => setPage("Réclamations")} />
         )}
