@@ -6,6 +6,7 @@ from app.repositories import client_repo
 from app.core.security import hacher_mot_de_passe
 from app.core.validation import valider_format_telephone, valider_format_mot_de_passe
 from app.core.dependances import get_utilisateur_courant
+from app.core.email import envoyer_email_verification
 
 router = APIRouter(prefix="/auth", tags= ["auth"])
 
@@ -68,6 +69,8 @@ def register(donnees: inscription_requete):
         "actif": True,
         "client_id": fiche["id"],
     })
+
+    envoyer_email_verification(donnees.email, "https://lien-a-definir")
 
     token = creer_token({"sub": compte["id"], "role": "client", "client_id": fiche["id"]})
     return {"access_token": token}

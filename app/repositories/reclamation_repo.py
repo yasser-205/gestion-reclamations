@@ -1,6 +1,8 @@
 from bson import ObjectId
 from datetime import datetime, timezone
 from app.database import db
+from app.repositories import client_repo
+from app.core.email import envoyer_email_cloture
 
 collection = db["reclamation"]
 
@@ -73,6 +75,12 @@ def changer_statut(id:str, nouveau_statut:str, auteur:str) -> dict |None:
         maj["date_cloture"] = maintenant
 
     collection.update_one({"_id": ObjectId(id)}, {"$set": maj})
+
+    if nouveau_statut == "cloturee":
+        client = client_repo.get_par_id(reclamation["client_id"])
+        if client:
+            envoyer_email_cloture(client["email"], reclamation["numero_reclamation"])
+
     return _serialiser(collection.find_one({"_id": ObjectId(id)}))
 
 def affecter_gestionnaire(id:str, gestionnaire_id:str, gestionnaire_nom:str, auteur:str) -> dict | None:

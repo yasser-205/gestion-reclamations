@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     jwt_algorithm : str = "HS256"
     access_token_expire_minutes : int = 60
 
+    resend_api_key : str
+    resend_from : str = "onboarding@resend.dev"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
