@@ -21,6 +21,7 @@ class ClientBase(BaseModel):
     date_naissance: Optional[date] = None
     adresse: Optional[Adresse] = None
     contrat: list[Contrat] = []
+    email_verifie: bool = False
 
     @field_validator("telephone")
     @classmethod

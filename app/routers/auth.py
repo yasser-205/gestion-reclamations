@@ -1,3 +1,4 @@
+import secrets
 from fastapi import APIRouter, HTTPException,Depends
 from pydantic import BaseModel,EmailStr, field_validator
 from app.repositories import utilisateur_repo
@@ -7,6 +8,7 @@ from app.core.security import hacher_mot_de_passe
 from app.core.validation import valider_format_telephone, valider_format_mot_de_passe
 from app.core.dependances import get_utilisateur_courant
 from app.core.email import envoyer_email_verification
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags= ["auth"])
 
@@ -52,12 +54,15 @@ def register(donnees: inscription_requete):
     if utilisateur_repo.get_par_login(donnees.login):
         raise HTTPException(status_code=400, detail="Ce login est déja pris")
 
+    token_verification = secrets.token_urlsafe(32)
+
     fiche = client_repo.creer_client({
         "nom": donnees.nom,
         "prenom": donnees.prenom,
         "email": donnees.email,
         "telephone": donnees.telephone,
         "contrats": [],
+        "token_verification": token_verification,
     })
 
     compte = utilisateur_repo.creer_utilisateur({
@@ -70,10 +75,18 @@ def register(donnees: inscription_requete):
         "client_id": fiche["id"],
     })
 
-    envoyer_email_verification(donnees.email, "https://lien-a-definir")
+    lien_verification = f"{settings.frontend_url}/?verifier={token_verification}"
+    envoyer_email_verification(donnees.email, lien_verification)
 
     token = creer_token({"sub": compte["id"], "role": "client", "client_id": fiche["id"]})
     return {"access_token": token}
+
+@router.get("/verifier-email")
+def verifier_email(token: str):
+    client = client_repo.verifier_email(token)
+    if client is None:
+        raise HTTPException(status_code=400, detail="Lien de vérification invalide ou déjà utilisé.")
+    return {"message": "Email vérifié avec succès."}
 
 @router.get("/me")
 def me(utilisateur: dict = Depends(get_utilisateur_courant)):

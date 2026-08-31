@@ -23,6 +23,10 @@ def _generer_numero() ->str:
 def creer_reclamation(donnees: dict, auteur:str) -> dict:
     maintenant = datetime.now(timezone.utc)
 
+    if donnees.get("date_sinistre") is not None:
+        d = donnees["date_sinistre"]
+        donnees["date_sinistre"] = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+
     donnees["numero_reclamation"] = _generer_numero()
     donnees["statut"] = "nouvelle"
     donnees["gestionnaire_id"] = None

@@ -21,10 +21,21 @@ def _generer_numero() -> str :
 def creer_client(donnees: dict) -> dict:
     donnees["numero_client"] = _generer_numero()
     donnees["date_creation"] = datetime.now(timezone.utc)
+    donnees["email_verifie"] = False
 
     resultat = collection.insert_one(donnees)
     doc = collection.find_one({"_id": resultat.inserted_id})
     return _serealiser(doc)
+
+def verifier_email(token: str) -> dict | None:
+    doc = collection.find_one({"token_verification": token})
+    if doc is None:
+        return None
+    collection.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"email_verifie": True}, "$unset": {"token_verification": ""}},
+    )
+    return get_par_id(str(doc["_id"]))
 
 def lister() -> list[dict]:
     return [_serealiser(doc) for doc in collection.find().sort("date_creation", -1)]
