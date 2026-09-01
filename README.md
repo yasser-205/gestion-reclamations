@@ -53,7 +53,7 @@ possibles).
 ```powershell
 cd mon_projet
 venv\Scripts\activate
-pip install fastapi uvicorn[standard] pymongo pydantic pydantic-settings bcrypt python-jose email-validator python-multipart
+pip install fastapi uvicorn[standard] pymongo pydantic pydantic-settings bcrypt python-jose email-validator python-multipart resend
 ```
 
 Créer un fichier `.env` à la racine de `mon_projet` :
@@ -64,7 +64,16 @@ DB_NAME=reclamations
 JWT_SECRET=change-moi
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
+RESEND_API_KEY=re_xxxxxxxxx
+RESEND_FROM=onboarding@resend.dev
 ```
+
+`RESEND_API_KEY` s'obtient sur [resend.com](https://resend.com) (compte gratuit). Tant
+qu'aucun domaine n'est vérifié sur Resend, garder `RESEND_FROM=onboarding@resend.dev` —
+les emails ne peuvent alors être envoyés qu'à l'adresse du compte Resend lui-même.
+Pour envoyer aux vrais clients, réserver un domaine, le vérifier sur
+resend.com/domains, puis passer `RESEND_FROM` à une adresse sur ce domaine
+(ex. `noreply@cat-assurance.ma`).
 
 Lancer le serveur :
 
@@ -83,8 +92,9 @@ python creer_admin.py          # login: admin / mot de passe: admin123
 ```
 
 À changer ou supprimer avant toute mise en production. Les autres comptes clients
-se créent depuis l'écran d'inscription du front, les comptes du personnel depuis la
-page "Utilisateurs" (admin uniquement).
+se créent depuis l'écran d'inscription du front (avec vérification par code email,
+voir ci-dessous), les comptes du personnel depuis la page "Utilisateurs" (admin
+uniquement).
 
 ## Frontend
 
@@ -102,7 +112,16 @@ Autres scripts npm : `npm run build` (production), `npm run lint`, `npm run prev
 
 ## Fonctionnalités principales
 
-- Authentification par token JWT, inscription client en libre-service
+- Authentification par token JWT, inscription client en libre-service avec
+  vérification d'email par code : à l'inscription, un code à 6 chiffres (valable
+  15 min) est envoyé par email et doit être saisi sur le site pour activer le
+  compte et se connecter ; un code peut être renvoyé si besoin. Une inscription
+  jamais confirmée n'immobilise pas définitivement le login, qui redevient
+  disponible à la tentative suivante.
+- Notifications email (Resend) : code de vérification à l'inscription, email au
+  client quand sa réclamation est clôturée. Un échec d'envoi (Resend
+  indisponible, domaine non vérifié) n'empêche jamais l'action elle-même
+  (inscription, clôture) — il est seulement loggué côté serveur.
 - Réclamations : création par le client (avec pièces jointes optionnelles), deux
   types — `sinistre` (numéro de sinistre optionnel, date de sinistre et
   immatriculation obligatoires) et `production` (police et/ou matriculation) —,
