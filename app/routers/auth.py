@@ -61,8 +61,14 @@ class ConfirmationInscription(BaseModel):
 
 @router.post("/register", response_model=InscriptionEnAttenteReponse, status_code=201)
 def register(donnees: inscription_requete):
-    if utilisateur_repo.get_par_login(donnees.login):
-        raise HTTPException(status_code=400, detail="Ce login est déja pris")
+    existant = utilisateur_repo.get_par_login(donnees.login)
+    if existant:
+        if existant.get("actif", True):
+            raise HTTPException(status_code=400, detail="Ce login est déja pris")
+        # inscription précédente jamais confirmée : on repart de zéro
+        if existant.get("client_id"):
+            client_repo.supprimer_client(existant["client_id"])
+        utilisateur_repo.supprimer_utilisateur(existant["id"])
 
     code_verification = f"{secrets.randbelow(1_000_000):06d}"
     expiration = datetime.now(timezone.utc).replace(tzinfo=None) + DUREE_VALIDITE_CODE
@@ -108,6 +114,24 @@ def confirmer_inscription(donnees: ConfirmationInscription):
 
     token = creer_token({"sub": compte["id"], "role": "client", "client_id": client["id"]})
     return {"access_token": token}
+
+class RenvoiCode(BaseModel):
+    email: EmailStr
+
+@router.post("/renvoyer-code")
+def renvoyer_code(donnees: RenvoiCode):
+    client = client_repo.get_par_email(donnees.email)
+    if client is None:
+        raise HTTPException(status_code=404, detail="Aucun compte avec cet email.")
+    if client.get("email_verifie"):
+        raise HTTPException(status_code=400, detail="Ce compte est déjà vérifié.")
+
+    code_verification = f"{secrets.randbelow(1_000_000):06d}"
+    expiration = datetime.now(timezone.utc).replace(tzinfo=None) + DUREE_VALIDITE_CODE
+    client_repo.regenerer_code(donnees.email, code_verification, expiration)
+
+    envoyer_email_verification(donnees.email, code_verification)
+    return {"message": "Un nouveau code a été envoyé."}
 
 @router.get("/me")
 def me(utilisateur: dict = Depends(get_utilisateur_courant)):

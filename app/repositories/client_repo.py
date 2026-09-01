@@ -40,6 +40,23 @@ def verifier_code(email: str, code: str) -> dict | None:
     )
     return get_par_id(str(doc["_id"]))
 
+def get_par_email(email: str) -> dict | None:
+    doc = collection.find_one({"email": email})
+    return _serealiser(doc) if doc else None
+
+def regenerer_code(email: str, code: str, expiration) -> dict | None:
+    doc = collection.find_one({"email": email})
+    if doc is None:
+        return None
+    collection.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"code_verification": code, "code_expiration": expiration}},
+    )
+    return get_par_id(str(doc["_id"]))
+
+def supprimer_client(id: str) -> None:
+    collection.delete_one({"_id": ObjectId(id)})
+
 def lister() -> list[dict]:
     return [_serealiser(doc) for doc in collection.find().sort("date_creation", -1)]
 

@@ -100,6 +100,23 @@ function Login({ onConnecte }) {
     }
   }
 
+  async function renvoyerCode() {
+    setErreur("");
+    setChargement(true);
+    const { ok, status } = await apiRequest("/auth/renvoyer-code", {
+      method: "POST",
+      body: { email: emailEnAttente },
+    });
+    setChargement(false);
+    if (ok) {
+      toast.success("Nouveau code envoyé.");
+    } else if (status === 400) {
+      setErreur("Ce compte est déjà vérifié.");
+    } else {
+      setErreur(messageErreur(status));
+    }
+  }
+
   return (
     <div className="ecran-login">
       <div className="login-hero">
@@ -149,6 +166,9 @@ function Login({ onConnecte }) {
                 />
               </label>
               <button type="submit" disabled={chargement}>Confirmer</button>
+              <button type="button" className="btn-secondaire" onClick={renvoyerCode} disabled={chargement}>
+                Renvoyer le code
+              </button>
               <button
                 type="button"
                 className="btn-secondaire"
