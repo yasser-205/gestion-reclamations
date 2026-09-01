@@ -18,6 +18,9 @@ function Login({ onConnecte }) {
   const [email, setEmail] = useState("");
   const [telephone, setTelephone] = useState("");
 
+  const [emailEnAttente, setEmailEnAttente] = useState("");
+  const [codeVerification, setCodeVerification] = useState("");
+
   async function seConnecter(e) {
     e.preventDefault();
     setErreur("");
@@ -63,10 +66,35 @@ function Login({ onConnecte }) {
     setChargement(false);
 
     if (ok) {
-      toast.success("Compte créé.");
-      onConnecte(data.access_token);
+      toast.success("Code de vérification envoyé par email.");
+      setEmailEnAttente(data.email);
+      setMode("confirmation");
     } else if (status === 400) {
       setErreur("Ce login est déjà pris.");
+    } else {
+      setErreur(messageErreur(status));
+    }
+  }
+
+  async function confirmerInscription(e) {
+    e.preventDefault();
+    setErreur("");
+    if (!codeVerification) {
+      setErreur("Veuillez saisir le code reçu par email.");
+      return;
+    }
+    setChargement(true);
+    const { ok, status, data } = await apiRequest("/auth/confirmer-inscription", {
+      method: "POST",
+      body: { email: emailEnAttente, code: codeVerification },
+    });
+    setChargement(false);
+
+    if (ok) {
+      toast.success("Compte vérifié, bienvenue !");
+      onConnecte(data.access_token);
+    } else if (status === 400) {
+      setErreur("Code invalide ou expiré.");
     } else {
       setErreur(messageErreur(status));
     }
@@ -84,24 +112,52 @@ function Login({ onConnecte }) {
         <div className="page page-login">
           <h1>Portail réclamations</h1>
 
-          <div className="segmented">
-            <button
-              type="button"
-              className={mode === "connexion" ? "actif" : ""}
-              onClick={() => { setMode("connexion"); setErreur(""); }}
-            >
-              Se connecter
-            </button>
-            <button
-              type="button"
-              className={mode === "inscription" ? "actif" : ""}
-              onClick={() => { setMode("inscription"); setErreur(""); }}
-            >
-              S'inscrire
-            </button>
-          </div>
+          {mode !== "confirmation" && (
+            <div className="segmented">
+              <button
+                type="button"
+                className={mode === "connexion" ? "actif" : ""}
+                onClick={() => { setMode("connexion"); setErreur(""); }}
+              >
+                Se connecter
+              </button>
+              <button
+                type="button"
+                className={mode === "inscription" ? "actif" : ""}
+                onClick={() => { setMode("inscription"); setErreur(""); }}
+              >
+                S'inscrire
+              </button>
+            </div>
+          )}
 
-          {mode === "connexion" ? (
+          {mode === "confirmation" ? (
+            <form className="formulaire" onSubmit={confirmerInscription}>
+              <h2>Vérifiez votre email</h2>
+              <p className="legende">
+                Un code à 6 chiffres a été envoyé à {emailEnAttente}. Saisissez-le
+                ci-dessous pour finaliser votre inscription.
+              </p>
+              <label>
+                Code de vérification
+                <input
+                  value={codeVerification}
+                  onChange={(e) => setCodeVerification(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="123456"
+                />
+              </label>
+              <button type="submit" disabled={chargement}>Confirmer</button>
+              <button
+                type="button"
+                className="btn-secondaire"
+                onClick={() => { setMode("inscription"); setErreur(""); }}
+              >
+                ← Modifier mes informations
+              </button>
+            </form>
+          ) : mode === "connexion" ? (
             <form className="formulaire" onSubmit={seConnecter}>
               <label>
                 Login

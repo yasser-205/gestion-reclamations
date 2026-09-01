@@ -13,7 +13,6 @@ import Clients from "./pages/Clients";
 import Dashboard from "./pages/Dashboard";
 import Employes from "./pages/Employes";
 import MonProfil from "./pages/MonProfil";
-import VerifierEmail from "./pages/VerifierEmail";
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem("token"));
@@ -48,16 +47,6 @@ function App() {
     localStorage.removeItem("token");
     setToken(null);
     setMoi(null);
-  }
-
-  const tokenVerification = new URLSearchParams(window.location.search).get("verifier");
-  if (tokenVerification) {
-    return (
-      <>
-        <ToasterTheme />
-        <VerifierEmail token={tokenVerification} />
-      </>
-    );
   }
 
   if (!token) {

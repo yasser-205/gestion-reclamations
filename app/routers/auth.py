@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException,Depends
 from pydantic import BaseModel,EmailStr, field_validator
 from app.repositories import utilisateur_repo
@@ -8,7 +9,8 @@ from app.core.security import hacher_mot_de_passe
 from app.core.validation import valider_format_telephone, valider_format_mot_de_passe
 from app.core.dependances import get_utilisateur_courant
 from app.core.email import envoyer_email_verification
-from app.config import settings
+
+DUREE_VALIDITE_CODE = timedelta(minutes=15)
 
 router = APIRouter(prefix="/auth", tags= ["auth"])
 
@@ -49,12 +51,21 @@ def login(donnes:LoginRequete):
     token = creer_token({"sub": utilisateur["id"],"role": utilisateur["role"]})
     return{"access_token": token}
 
-@router.post("/register",response_model=tokenReponse, status_code=201)
+class InscriptionEnAttenteReponse(BaseModel):
+    message: str
+    email: str
+
+class ConfirmationInscription(BaseModel):
+    email: EmailStr
+    code: str
+
+@router.post("/register", response_model=InscriptionEnAttenteReponse, status_code=201)
 def register(donnees: inscription_requete):
     if utilisateur_repo.get_par_login(donnees.login):
         raise HTTPException(status_code=400, detail="Ce login est déja pris")
 
-    token_verification = secrets.token_urlsafe(32)
+    code_verification = f"{secrets.randbelow(1_000_000):06d}"
+    expiration = datetime.now(timezone.utc).replace(tzinfo=None) + DUREE_VALIDITE_CODE
 
     fiche = client_repo.creer_client({
         "nom": donnees.nom,
@@ -62,31 +73,41 @@ def register(donnees: inscription_requete):
         "email": donnees.email,
         "telephone": donnees.telephone,
         "contrats": [],
-        "token_verification": token_verification,
+        "code_verification": code_verification,
+        "code_expiration": expiration,
     })
 
-    compte = utilisateur_repo.creer_utilisateur({
+    utilisateur_repo.creer_utilisateur({
         "login": donnees.login,
         "mot_de_passe": hacher_mot_de_passe(donnees.mot_de_passe),
         "nom": donnees.nom,
         "prenom": donnees.prenom,
         "role": "client",
-        "actif": True,
+        "actif": False,
         "client_id": fiche["id"],
     })
 
-    lien_verification = f"{settings.frontend_url}/?verifier={token_verification}"
-    envoyer_email_verification(donnees.email, lien_verification)
+    envoyer_email_verification(donnees.email, code_verification)
 
-    token = creer_token({"sub": compte["id"], "role": "client", "client_id": fiche["id"]})
-    return {"access_token": token}
+    return {
+        "message": "Un code de vérification a été envoyé à votre adresse email.",
+        "email": donnees.email,
+    }
 
-@router.get("/verifier-email")
-def verifier_email(token: str):
-    client = client_repo.verifier_email(token)
+@router.post("/confirmer-inscription", response_model=tokenReponse)
+def confirmer_inscription(donnees: ConfirmationInscription):
+    client = client_repo.verifier_code(donnees.email, donnees.code)
     if client is None:
-        raise HTTPException(status_code=400, detail="Lien de vérification invalide ou déjà utilisé.")
-    return {"message": "Email vérifié avec succès."}
+        raise HTTPException(status_code=400, detail="Code invalide ou expiré.")
+
+    compte = utilisateur_repo.get_par_client_id(client["id"])
+    if compte is None:
+        raise HTTPException(status_code=404, detail="Compte introuvable.")
+
+    utilisateur_repo.modifier_utilisateur(compte["id"], {"actif": True})
+
+    token = creer_token({"sub": compte["id"], "role": "client", "client_id": client["id"]})
+    return {"access_token": token}
 
 @router.get("/me")
 def me(utilisateur: dict = Depends(get_utilisateur_courant)):

@@ -5,16 +5,17 @@ from app.config import settings
 resend.api_key = settings.resend_api_key
 logger = logging.getLogger(__name__)
 
-def envoyer_email_verification(destinataire: str, lien_verification: str):
+def envoyer_email_verification(destinataire: str, code: str):
     try:
         resend.Emails.send({
             "from": settings.resend_from,
             "to": destinataire,
-            "subject": "Vérifiez votre adresse email — CAT Assurance",
+            "subject": "Votre code de vérification — CAT Assurance",
             "html": f"""
                 <p>Bonjour,</p>
-                <p>Merci de votre inscription. Cliquez sur le lien ci-dessous pour vérifier votre adresse email :</p>
-                <p><a href="{lien_verification}">Vérifier mon email</a></p>
+                <p>Merci de votre inscription. Voici votre code de vérification :</p>
+                <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">{code}</p>
+                <p>Saisissez ce code sur le site pour finaliser votre inscription. Il est valable 15 minutes.</p>
             """,
         })
     except Exception:

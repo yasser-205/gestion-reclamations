@@ -27,13 +27,16 @@ def creer_client(donnees: dict) -> dict:
     doc = collection.find_one({"_id": resultat.inserted_id})
     return _serealiser(doc)
 
-def verifier_email(token: str) -> dict | None:
-    doc = collection.find_one({"token_verification": token})
+def verifier_code(email: str, code: str) -> dict | None:
+    doc = collection.find_one({"email": email, "code_verification": code})
     if doc is None:
+        return None
+    expiration = doc.get("code_expiration")
+    if expiration is not None and expiration < datetime.now(timezone.utc).replace(tzinfo=None):
         return None
     collection.update_one(
         {"_id": doc["_id"]},
-        {"$set": {"email_verifie": True}, "$unset": {"token_verification": ""}},
+        {"$set": {"email_verifie": True}, "$unset": {"code_verification": "", "code_expiration": ""}},
     )
     return get_par_id(str(doc["_id"]))
 
